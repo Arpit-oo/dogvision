@@ -1,0 +1,23 @@
+name: dogvision
+channels:
+  - rapidsai
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.10
+  - cudatoolkit=12.2
+  - cudf=24.06
+  - cupy>=13.0
+  - numba>=0.59
+  - pip
+  - pip:
+      - ultralytics>=8.2.0
+      - torch>=2.2.0
+      - torchvision>=0.17.0
+      - opencv-python>=4.9.0
+      - av>=12.0.0
+      - pyarrow>=15.0.0
+      - rich>=13.7.0
+      - onnxruntime>=1.17.0
+      - pandas>=2.2.0
+      - pyyaml>=6.0.1
