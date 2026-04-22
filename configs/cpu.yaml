@@ -1,0 +1,33 @@
+model:
+  weights: yolov8n.pt     # smallest for CPU demo
+  imgsz: 480
+  conf: 0.35
+  iou: 0.5
+  half: false
+  trt: false
+  device: cpu
+  dog_class_id: 16
+
+tracker:
+  type: bytetrack
+  cfg: bytetrack.yaml
+
+pipeline:
+  queue_maxlen: 4
+  drop_policy: oldest
+
+analytics:
+  window_frames: 30
+  ring_capacity: 54000
+  hist_bins: 16
+  parquet_flush_every: 9000
+
+output:
+  display: true
+  save_video: true
+  video_path: out/annotated.mp4
+  detections_path: out/detections.parquet
+  analytics_path: out/analytics_window.json
+
+reconnect:
+  max_backoff_s: 30

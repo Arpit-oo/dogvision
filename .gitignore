@@ -7,3 +7,5 @@ out/
 runs/
 .venv/
 datasets/
+testdiog.mp4
+*.mp4

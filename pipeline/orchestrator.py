@@ -59,8 +59,13 @@ class Pipeline:
             tracker_cfg=cfg["tracker"]["cfg"],
         )
         self.tracker = DogTracker()
-        self.ring = DetectionRing(capacity=cfg["analytics"]["ring_capacity"])
-        self.window = AnalyticsWindow()
+        try:
+            self.ring = DetectionRing(capacity=cfg["analytics"]["ring_capacity"])
+            self.window = AnalyticsWindow()
+        except Exception as e:
+            print(f"[pipeline] cuDF/CuPy unavailable ({e}); analytics stage disabled.")
+            self.ring = None
+            self.window = None
 
         qmax = cfg["pipeline"]["queue_maxlen"]
         self._frame_q: "queue.Queue[FramePacket | None]" = queue.Queue(maxsize=qmax)
@@ -114,7 +119,8 @@ class Pipeline:
                 return
             dets = self.detector.track(pkt.frame, persist=True)
             self.tracker.update(dets, pkt.t_ns)
-            self.ring.append_batch(pkt.idx, pkt.stream_id, dets, pkt.t_ns)
+            if self.ring is not None:
+                self.ring.append_batch(pkt.idx, pkt.stream_id, dets, pkt.t_ns)
             # keep raw rows for parquet export
             for d in dets:
                 if d.track_id is None:
@@ -169,7 +175,8 @@ class Pipeline:
                     return
 
             # cuDF analytics every N frames
-            if pkt.idx > 0 and pkt.idx % win_every == 0 and self.ring.size > 0:
+            if (self.ring is not None and pkt.idx > 0
+                    and pkt.idx % win_every == 0 and self.ring.size > 0):
                 snap = self.ring.snapshot()
                 stats = self.window.compute(snap)
                 last_stats = stats.to_dict()
