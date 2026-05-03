@@ -1,8 +1,8 @@
 # How to Train and Run — Dogvision
 
-A GPU-first dog detection, tracking, and analytics pipeline using YOLOv8 +
-ByteTrack + RAPIDS cuDF. This document walks through setup, running the demo,
-benchmarking, and (optionally) fine-tuning YOLOv8 on your own dog dataset.
+A GPU-first object detection and behavior analysis system: detects dogs and persons,
+analyzes bite/aggression risk, enforces time-based access control, all with
+GPU-accelerated analytics (YOLOv8 + ByteTrack + RAPIDS cuDF).
 
 ---
 
@@ -45,9 +45,18 @@ python -c "import cudf; print(cudf.__version__)"
 python demo.py --source path/to/video.mp4
 ```
 Press **q** to quit. Outputs land in `out/`:
-- `out/annotated.mp4` — bounding boxes + track IDs
+- `out/annotated.mp4` — bounding boxes + track IDs + bite alerts + access violations
 - `out/detections.parquet` — per-detection log
+- `out/events.json` — bite risk + access violation events
+- `out/summary.json` — run summary (unique dogs/persons, alert counts, FPS)
 - `out/analytics_window.json` — latest cuDF rolling-window stats
+
+### 2.1b CPU MVP (full pipeline, no GPU needed)
+```bash
+python run_demo_cpu.py --source path/to/video.mp4 --no-display
+```
+Includes dog+person detection, bite risk analysis, and access control.
+Same outputs as GPU demo, just slower (~1-5 FPS on CPU).
 
 ### 2.2 On your webcam
 ```bash
@@ -84,23 +93,32 @@ python demo.py --source video.mp4 --no-trt
 ## 3. What the Pipeline Does
 
 ```
-┌──────────┐    ┌──────────────────┐    ┌──────────────────────┐
-│ decode   │───▶│ YOLOv8 + ByteTrack│───▶│ CuPy ring → cuDF     │
-│ (cv2/PyAV)│    │ (TRT FP16 on GPU)│    │ rolling window stats │
-└──────────┘    └──────────────────┘    └──────────────────────┘
-                         │
-                         ▼
-                 annotated frames ─▶ cv2.imshow + out/*.mp4
+┌──────────┐    ┌──────────────────────┐    ┌──────────────────────┐
+│ decode   │───▶│ YOLOv8 + ByteTrack   │───▶│   Pipeline Router    │
+│ (cv2/PyAV)│    │ (TRT FP16, dog+person)│    │   dogs → Dog Pipeline│
+└──────────┘    └──────────────────────┘    │   persons → Person   │
+                                            └──────────────────────┘
+                                                      │
+                    ┌─────────────────────┐    ┌──────┴──────────────┐
+                    │  Dog Pipeline       │    │  Person Pipeline     │
+                    │  bite risk analyzer │    │  access control      │
+                    │  (proximity+lunge)  │    │  (time-based YAML)   │
+                    └─────────────────────┘    └─────────────────────┘
+                                │                       │
+                          Event Log + cuDF + HUD + out/annotated.mp4
 ```
 
 Key GPU optimizations:
 - **YOLOv8 exported to TensorRT FP16** on first run (engine cached next to the `.pt`).
+- **Single YOLO pass** detects both dogs and persons — routed into dual pipelines.
 - **ByteTrack** runs inside Ultralytics' fused detect-and-track path; no extra CPU hop.
 - **CuPy ring buffer** stores detection rows in preallocated GPU columns — O(1) append,
   no per-frame cuDF concat.
 - **cuDF rolling window** recomputes aggregates every 30 frames (≈1 s at 30 FPS).
 - **Three-thread pipeline** (decode / inference / analytics+display) with bounded
   queues so decode overlaps with inference.
+- **Bite risk analyzer**: proximity + IoU overlap + lunge detection + sustained contact → event log.
+- **Access control**: per-camera time windows from YAML config → unauthorized person events.
 
 ---
 
@@ -177,11 +195,13 @@ yolo export model=runs/train/dogvision/weights/best.pt format=engine half=True i
 
 | Section | Key | Notes |
 |---------|-----|-------|
-| model | weights, imgsz, conf, iou, half, trt, device, dog_class_id | Adjust `dog_class_id` to `0` after fine-tune |
+| model | weights, imgsz, conf, iou, half, trt, device, classes | `classes: [0, 16]` for person+dog |
 | tracker | cfg | `bytetrack.yaml` (shipped with Ultralytics) |
 | pipeline | queue_maxlen, drop_policy | Keep `oldest` for real-time |
 | analytics | window_frames, ring_capacity, hist_bins | Lower `window_frames` for faster dashboard updates |
-| output | display, save_video, paths | Toggle file vs live outputs |
+| behavior.bite_risk | proximity_thresh, alert_score, etc. | Tune sensitivity |
+| behavior.access_control | config path | Points to `configs/access_schedule.yaml` |
+| output | display, save_video, events_path, etc. | Toggle file vs live outputs |
 | reconnect | max_backoff_s | For webcam/RTSP stall recovery |
 
 ---
@@ -211,11 +231,13 @@ or reduce `imgsz` to 512.
 vaibhav/
 ├── detection/       YOLOv8 wrapper + TRT export
 ├── tracking/        per-ID trajectory accumulator
-├── analytics/       CuPy ring buffer, cuDF window ops, ROI histograms
-├── pipeline/        threaded orchestrator
+├── behavior/        bite risk analyzer + access control
+├── analytics/       CuPy ring buffer, cuDF window, event log, ROI hist
+├── pipeline/        threaded GPU orchestrator
 ├── utils/           video IO, drawing, deterministic color
-├── configs/         yaml configs
-├── demo.py          main entry point
+├── configs/         model config + access_schedule.yaml
+├── demo.py          GPU entry point
+├── run_demo_cpu.py  CPU MVP (full dual pipeline)
 ├── benchmark.py     GPU-vs-CPU benchmark
 ├── train.py         optional YOLOv8 fine-tune
 ├── environment.yml  conda env (RAPIDS + PyTorch + Ultralytics)

@@ -1,15 +1,15 @@
 model:
   weights: yolov8s.pt
   imgsz: 640
-  conf: 0.35
+  conf: 0.25
   iou: 0.5
-  half: true          # FP16
-  trt: true           # export + use TensorRT engine when available
+  half: true
+  trt: true
   device: 0
-  dog_class_id: 16    # COCO class index for 'dog'
+  classes: [0, 16]       # COCO: person=0, dog=16
 
 tracker:
-  type: bytetrack     # ultralytics-supported: bytetrack | botsort
+  type: bytetrack
   cfg: bytetrack.yaml
 
 pipeline:
@@ -17,10 +17,20 @@ pipeline:
   drop_policy: oldest
 
 analytics:
-  window_frames: 30   # recompute cuDF aggregates every N frames
-  ring_capacity: 54000  # ~30 min at 30 FPS single stream
+  window_frames: 30
+  ring_capacity: 54000
   hist_bins: 16
-  parquet_flush_every: 9000  # rows
+  parquet_flush_every: 9000
+
+behavior:
+  bite_risk:
+    proximity_thresh: 1.5
+    iou_alert_thresh: 0.05
+    lunge_area_ratio: 1.35
+    sustained_frames: 4
+    alert_score: 0.55
+  access_control:
+    config: configs/access_schedule.yaml
 
 output:
   display: true
@@ -28,6 +38,7 @@ output:
   video_path: out/annotated.mp4
   detections_path: out/detections.parquet
   analytics_path: out/analytics_window.json
+  events_path: out/events.json
 
 reconnect:
   max_backoff_s: 30

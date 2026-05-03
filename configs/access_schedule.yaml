@@ -1,0 +1,18 @@
+# Per-camera authorized access windows.
+# Persons detected outside these windows are flagged as unauthorized.
+cameras:
+  - stream_id: 0
+    name: "Front Yard Camera"
+    allowed_hours:
+      - start: "06:00"
+        end: "22:00"
+  - stream_id: 1
+    name: "Back Gate Camera"
+    allowed_hours:
+      - start: "07:00"
+        end: "19:00"
+  - stream_id: 2
+    name: "Parking Lot"
+    allowed_hours:
+      - start: "06:00"
+        end: "23:00"

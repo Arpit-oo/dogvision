@@ -1,12 +1,14 @@
-# GPU-First Dog Detection, Tracking & Analytics — Spec
+# GPU-Accelerated Object Detection & Behavior Analysis — Spec
 
 ## 1. Objective
-Real-time system that (1) detects dogs in video, (2) tracks them across frames with unique IDs,
-(3) runs GPU-accelerated analytics over detections with RAPIDS cuDF, and (4) outputs annotated
-video + structured insights. Everything feasible runs on GPU; CPU work is minimized.
+Real-time system that (1) detects **dogs and persons** in video, (2) tracks each across
+frames with unique IDs, (3) analyzes **dog bite/aggression risk** via proximity and motion
+heuristics, (4) enforces **time-based person access control** per camera, (5) runs
+GPU-accelerated analytics over detections with RAPIDS cuDF, and (6) outputs annotated
+video + event log + structured insights. Everything feasible runs on GPU; CPU work is minimized.
 
 ## 2. Hard Constraints
-- Single class: **dog only** (COCO class 16).
+- Two classes: **dog** (COCO class 16) + **person** (COCO class 0).
 - GPU-first: decode → inference → ROI features → analytics stay on GPU where practical.
 - No person/behavior/multi-class detection, no distributed systems, no cloud deploy.
 
@@ -18,7 +20,7 @@ video + structured insights. Everything feasible runs on GPU; CPU work is minimi
 
 ## 4. GPU Stack
 - PyTorch (CUDA, FP16/AMP) — inference runtime.
-- Ultralytics YOLOv8 (pretrained COCO, class-filtered to `dog`).
+- Ultralytics YOLOv8 (pretrained COCO, class-filtered to `dog` + `person`).
 - **TensorRT FP16** export as the primary inference path; PyTorch FP16 as fallback.
 - CuPy — ring buffer for detection metadata; color-histogram kernels on ROIs.
 - Numba CUDA — any bespoke kernels (e.g., bbox-area batch ops).
@@ -29,18 +31,22 @@ video + structured insights. Everything feasible runs on GPU; CPU work is minimi
 ## 5. Architecture
 
 ```
-[Decoder thread] --frames--> [Inference thread] --det+crops--> [Analytics thread]
-   (PyAV/cv2)                 (YOLOv8 TRT FP16)                 (CuPy ring + cuDF)
-                                     |
-                              [ByteTrack (CPU-light)]
-                                     |
-                               annotated frames
-                                     |
-                            [Display + file writer]
+[Decoder thread] --frames--> [Inference thread] --det+crops--> [Pipeline Router]
+   (PyAV/cv2)                 (YOLOv8 TRT FP16)                      |
+                              [ByteTrack per-class]           ┌───────┴────────┐
+                                                              │                │
+                                                     [Dog Pipeline]    [Person Pipeline]
+                                                      bite risk        access control
+                                                      proximity+       time-based
+                                                      lunge+overlap    per-camera
+                                                              │                │
+                                                     [Event Log + cuDF Analytics + HUD]
 ```
 
 Three threads communicate via bounded queues; CUDA streams let decode upload overlap with
-inference. Tensors stay on GPU from decode → inference → ROI features.
+inference. Detections are routed by class into two async pipelines:
+- **Dog Pipeline:** bite risk analysis (proximity, lunge, overlap, sustained contact).
+- **Person Pipeline:** access control (per-camera time windows via YAML config).
 
 ### Stage 1 — Ingestion
 - Sources: local `.mp4/.mkv` and live webcam (v1). Multi-stream (v2) via repeated `--source`.
@@ -77,25 +83,30 @@ inference. Tensors stay on GPU from decode → inference → ROI features.
 - Ring buffer capped (e.g. 60 s of detections); oldest rows flushed to Parquet on disk.
 
 ### Stage 6 — Output
-- Live: OpenCV window with bbox, `track_id`, conf; console table of live analytics
-  (refreshed every window).
-- Box color: deterministic `hash(track_id) → HSV` so a given dog keeps its color.
+- Live: OpenCV window with color-coded bboxes (dogs=green, persons=teal), track IDs,
+  bite risk alert lines (red), access violation labels (orange), semi-transparent HUD.
+- Box color: deterministic `hash(track_id) → HSV` for dogs; fixed teal for persons.
 - Files:
-  - `out/annotated_<source>.mp4` — rendered video.
-  - `out/detections.parquet` — full per-detection log (frame, stream, track_id, bbox, conf, ts).
+  - `out/annotated.mp4` — rendered video with full HUD.
+  - `out/detections.parquet` — per-detection log (frame, stream, track_id, bbox, conf, ts).
+  - `out/events.json` — bite risk events + access violation events.
+  - `out/summary.json` — run summary (counts, FPS).
   - `out/analytics_window.json` — latest rolling aggregates snapshot.
 
 ## 6. Repo Layout
 ```
 vaibhav/
-├── detection/       # yolov8 wrapper + TRT export
-├── tracking/        # ByteTrack integration
-├── analytics/       # CuPy ring buffer, cuDF window ops
-├── pipeline/        # threaded orchestrator, queues, CUDA streams
-├── utils/           # video io, drawing, color hash, benchmarking
-├── demo.py          # entry point: `python demo.py --source x.mp4`
+├── detection/       # YOLOv8 wrapper + TRT export
+├── tracking/        # ByteTrack trajectory accumulator
+├── behavior/        # bite risk analyzer + access control
+├── analytics/       # CuPy ring buffer, cuDF window ops, event log, ROI hist
+├── pipeline/        # threaded GPU orchestrator
+├── utils/           # video IO, drawing, color hash
+├── demo.py          # GPU entry point
+├── run_demo_cpu.py  # CPU MVP entry point (full dual pipeline)
 ├── benchmark.py     # CPU-vs-GPU baseline
-├── configs/         # yaml hyperparams
+├── train.py         # optional YOLOv8 fine-tune
+├── configs/         # model config + access schedule YAML
 └── README.md
 ```
 
@@ -120,9 +131,29 @@ v2 will accept multiple `--source` flags for 2–4 stream batched inference.
 - ≥ 20 FPS aggregate on 4× 720p streams (RTX 4070), batched inference.
 - Analytics window recompute ≤ 20 ms on window size ≤ 1800 rows.
 
-## 11. Out of Scope (v1)
-Breed classification, behavior/pose, person detection, multi-class, zone counting,
-trajectory heatmaps, dwell-time analytics, distributed ingestion, cloud deploy.
+## 11. Behavior Analysis
+
+### Dog Bite Risk (behavior/bite_detector.py)
+Four-factor heuristic scoring (0–1):
+- **Proximity** (30%): dog-person center distance normalized by dog diagonal.
+- **Overlap** (25%): IoU between dog and person bboxes.
+- **Lunge** (25%): rapid bbox area growth (>35% in 4 frames).
+- **Sustained contact** (20%): frames of continuous proximity.
+Score ≥ 0.55 → bite risk event logged.
+
+### Person Access Control (behavior/access_control.py)
+- YAML config (`configs/access_schedule.yaml`) maps stream IDs to allowed time windows.
+- Persons detected outside allowed hours → unauthorized access event logged.
+
+### Event Log (analytics/event_log.py)
+- Unified JSON log for bite + access events.
+- Periodic flush to `out/events.json`.
+- Counts surfaced in HUD overlay.
+
+## 12. Out of Scope (v1)
+Breed classification, deep-learning pose estimation, zone counting,
+trajectory heatmaps, dwell-time analytics, distributed ingestion, cloud deploy,
+real-time SMS/push alerts, multi-GPU.
 These may be revisited per future needs.
 
 ## 12. Deliverables
