@@ -220,7 +220,7 @@ def main() -> None:
                     help="YOLOv8 weights (use yolov8s for speed with 4 streams)")
     ap.add_argument("--imgsz", type=int, default=640,
                     help="YOLO input size (lower = faster for multi-stream)")
-    ap.add_argument("--conf", type=float, default=0.25,
+    ap.add_argument("--conf", type=float, default=0.30,
                     help="Detection confidence threshold")
     ap.add_argument("--access-config", default="configs/access_schedule.yaml",
                     help="Per-camera access schedule YAML")
