@@ -80,11 +80,11 @@ class BiteRiskAnalyzer:
     """
 
     # Tunable thresholds — adjust these to change sensitivity
-    PROXIMITY_THRESH = 1.5    # Dog-person distance / dog diagonal — below this = "close"
-    IOU_ALERT_THRESH = 0.05   # Any bbox overlap above this = physical contact
-    LUNGE_AREA_RATIO = 1.35   # 35% bbox area growth in 4 frames = dog lunging forward
-    SUSTAINED_FRAMES = 4      # Frames of proximity before "sustained" factor activates
-    ALERT_SCORE = 0.55        # Composite score threshold to emit a bite risk event
+    PROXIMITY_THRESH = 2.0    # Dog-person distance / dog diagonal — below this = "close"
+    IOU_ALERT_THRESH = 0.03   # Any bbox overlap above this = physical contact
+    LUNGE_AREA_RATIO = 1.25   # 25% bbox area growth in 4 frames = dog lunging forward
+    SUSTAINED_FRAMES = 3      # Frames of proximity before "sustained" factor activates
+    ALERT_SCORE = 0.40        # Composite score threshold to emit a bite risk event
 
     def __init__(self):
         # Dictionary mapping (dog_id, person_id) → proximity state

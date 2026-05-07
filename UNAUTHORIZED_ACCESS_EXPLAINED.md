@@ -176,7 +176,7 @@ EventLog.flush()
 ### File: `run_demo_cpu.py` (integration point)
 
 ```python
-# Line ~161: Person Pipeline — access control
+# Line ~223: Person Pipeline — access control
 access_violations = access_ctrl.check(
     persons, args.stream_id, frame_idx, t_ns
 )

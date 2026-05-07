@@ -57,7 +57,7 @@ inference. Detections are routed by class into two async pipelines:
 ### Stage 2 — Detection (YOLOv8)
 - Model: `yolov8s.pt` default (configurable to n/m). Exported to TensorRT FP16 on first run.
 - Class filter: keep only `cls == 16` (dog).
-- Conf threshold **0.35**, IoU-NMS **0.5**.
+- Conf threshold **0.25**, IoU-NMS **0.5**.
 - Batch inference across active streams when N>1.
 - Output per detection: `bbox_xyxy`, `conf`, `frame_idx`, `stream_id`, `t_ns`.
 
@@ -104,6 +104,9 @@ vaibhav/
 ├── utils/           # video IO, drawing, color hash
 ├── demo.py          # GPU entry point
 ├── run_demo_cpu.py  # CPU MVP entry point (full dual pipeline)
+├── run_demo_gpu.py  # GPU demo (TRT FP16 + CuPy + cuDF)
+├── run_multi_stream.py  # multi-stream 2×2 CCTV grid
+├── generate_report.py   # academic Word report generator
 ├── benchmark.py     # CPU-vs-GPU baseline
 ├── train.py         # optional YOLOv8 fine-tune
 ├── configs/         # model config + access schedule YAML
@@ -135,11 +138,11 @@ v2 will accept multiple `--source` flags for 2–4 stream batched inference.
 
 ### Dog Bite Risk (behavior/bite_detector.py)
 Four-factor heuristic scoring (0–1):
-- **Proximity** (30%): dog-person center distance normalized by dog diagonal.
-- **Overlap** (25%): IoU between dog and person bboxes.
-- **Lunge** (25%): rapid bbox area growth (>35% in 4 frames).
-- **Sustained contact** (20%): frames of continuous proximity.
-Score ≥ 0.55 → bite risk event logged.
+- **Proximity** (30%): dog-person center distance normalized by dog diagonal (threshold: 2.0×).
+- **Overlap** (25%): IoU between dog and person bboxes (threshold: 0.03).
+- **Lunge** (25%): rapid bbox area growth (>25% in 4 frames).
+- **Sustained contact** (20%): frames of continuous proximity (3-frame window).
+Score ≥ 0.40 → bite risk event logged.
 
 ### Person Access Control (behavior/access_control.py)
 - YAML config (`configs/access_schedule.yaml`) maps stream IDs to allowed time windows.

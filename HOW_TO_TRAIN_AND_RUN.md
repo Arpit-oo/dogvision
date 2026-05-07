@@ -236,8 +236,11 @@ vaibhav/
 ├── pipeline/        threaded GPU orchestrator
 ├── utils/           video IO, drawing, deterministic color
 ├── configs/         model config + access_schedule.yaml
-├── demo.py          GPU entry point
+├── demo.py          GPU entry point (threaded pipeline)
 ├── run_demo_cpu.py  CPU MVP (full dual pipeline)
+├── run_demo_gpu.py  GPU demo (TRT FP16 + CuPy + cuDF)
+├── run_multi_stream.py  multi-stream 2×2 CCTV grid
+├── generate_report.py   academic Word report generator
 ├── benchmark.py     GPU-vs-CPU benchmark
 ├── train.py         optional YOLOv8 fine-tune
 ├── environment.yml  conda env (RAPIDS + PyTorch + Ultralytics)

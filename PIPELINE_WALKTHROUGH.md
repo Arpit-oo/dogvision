@@ -76,7 +76,7 @@ BiteRiskAnalyzer          AccessController               │
     │ risk = weighted sum     │                          │
     │ [bite_detector:131]     │                          │
     │                         │                          │
-    │ risk ≥ 0.55 → BiteEvent │                          │
+    │ risk ≥ 0.40 → BiteEvent │                          │
     │ [bite_detector:136]     │                          │
     │                         │                          │
     ├─────────────────────────┼──────────────────────────┘
@@ -263,12 +263,12 @@ Thread overlap               CUDA async memcpy            pipeline/orchestrator.
 All input data (bboxes, track_ids) comes from GPU inference.
 
 ```
-risk = 0.30 × proximity_score      ← GPU bbox center distance / GPU bbox diagonal
-     + 0.25 × overlap_score        ← GPU IoU between GPU-detected dog + person bboxes
-     + 0.25 × lunge_score          ← GPU bbox area growth over 4 GPU-processed frames
-     + 0.20 × sustained_score      ← temporal accumulator over GPU-tracked frame pairs
+risk = 0.30 × proximity_score      ← GPU bbox center distance / GPU bbox diagonal (thresh: 2.0×)
+     + 0.25 × overlap_score        ← GPU IoU between GPU-detected dog + person bboxes (thresh: 0.03)
+     + 0.25 × lunge_score          ← GPU bbox area growth over 4 GPU-processed frames (>25% = lunge)
+     + 0.20 × sustained_score      ← temporal accumulator over GPU-tracked frame pairs (3-frame window)
 
-risk ≥ 0.55 → BITE RISK EVENT
+risk ≥ 0.40 → BITE RISK EVENT
     → logged with GPU-computed metadata (bbox coords, track_ids, timestamps)
     → red alert line drawn between GPU-detected dog↔person centers
 ```

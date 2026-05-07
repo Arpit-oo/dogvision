@@ -58,7 +58,7 @@ def main() -> None:
                     help="YOLOv8 model weights file (n/s/m/l/x)")
     ap.add_argument("--imgsz", type=int, default=960,
                     help="Input image size for YOLO inference (larger = better recall, slower)")
-    ap.add_argument("--conf", type=float, default=0.30,
+    ap.add_argument("--conf", type=float, default=0.25,
                     help="Minimum confidence threshold for detections")
     ap.add_argument("--access-config", default="configs/access_schedule.yaml",
                     help="Path to per-camera access schedule YAML")

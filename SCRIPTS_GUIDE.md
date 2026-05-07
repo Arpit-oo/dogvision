@@ -118,7 +118,96 @@ python benchmark.py --source video.mp4 --max-frames 300
 
 ---
 
-## 5. `train.py` — Optional YOLOv8 Fine-Tuning
+## 5. `run_demo_gpu.py` — GPU Demo Entry Point (Presentation)
+
+**Purpose:** Full GPU demo script for showing the professor. Uses TensorRT FP16, CuPy ring buffer, and cuDF analytics.
+
+**What it does:**
+1. Validates CUDA availability and prints GPU info banner
+2. Auto-exports YOLOv8 to TensorRT FP16 engine (cached)
+3. Runs inference on GPU with FP16 precision
+4. Stores detections in CuPy GPU ring buffer
+5. Runs cuDF rolling-window analytics every 30 frames
+6. Full dual pipeline: bite risk + access control
+7. Annotated video output with GPU stats in HUD
+
+**How to run:**
+```bash
+python run_demo_gpu.py --source video.mp4 --no-display
+python run_demo_gpu.py --source video.mp4 --no-trt     # skip TensorRT, use PyTorch FP16
+python run_demo_gpu.py --source video.mp4 --device 0   # specific GPU
+```
+
+**Requires:** NVIDIA GPU + CUDA + PyTorch with CUDA support
+
+**Outputs:** Same as `run_demo_cpu.py` but processed on GPU at 25+ FPS.
+
+---
+
+## 6. `generate_report.py` — Academic Word Report Generator
+
+**Purpose:** Generates a professional 16-section `.docx` Word document for academic submission.
+
+**What it does:**
+1. Creates a structured academic report covering:
+   - Project overview and objectives
+   - GPU acceleration technology stack
+   - System architecture with pipeline diagrams
+   - Code-to-feature mapping
+   - Performance benchmarks (GPU vs CPU)
+   - Dataset justification
+   - Bite risk analysis methodology
+   - Access control system design
+2. Includes formatted tables, architecture descriptions, and section headers
+3. Print-ready formatting suitable for professor review
+
+**How to run:**
+```bash
+python generate_report.py
+```
+
+**Output:** `DogVision_GPU_Pipeline_Report.docx` in the project root.
+
+**Requires:** `python-docx` (`pip install python-docx`)
+
+---
+
+## 7. `train_and_evaluate.py` — Training Attempt + Model Comparison
+
+**Purpose:** Demonstrates our attempt to train a custom dog detection model and compares it against the pretrained COCO model to justify using pretrained weights.
+
+**What it does:**
+1. **Dataset creation:** Auto-labels dog images from input videos using pretrained YOLOv8m (or downloads from Roboflow if API key available)
+2. **Fine-tuning:** Trains YOLOv8s on the custom dataset for 15 epochs
+3. **Evaluation:** Runs both models on a test video and compares:
+   - Dog detection count
+   - Detection rate (% of frames with dogs)
+   - Average confidence
+   - FPS
+4. **Report:** Generates `out/training_report.json` with comparison table and conclusion explaining why pretrained was chosen
+
+**How to run:**
+```bash
+# Full pipeline: download dataset → train → evaluate → report
+python train_and_evaluate.py
+
+# Custom settings
+python train_and_evaluate.py --epochs 25 --test-video input/dogbite.mp4
+
+# Skip training, just evaluate existing weights
+python train_and_evaluate.py --evaluate-only
+```
+
+**No manual dataset needed.** Script auto-generates training data from your input videos.
+
+**Outputs:**
+- `out/training_report.json` — comparison report with conclusion
+- `runs/train/dog_finetune/weights/best.pt` — trained weights
+- `runs/train/dog_finetune/` — training curves, confusion matrix, PR curves
+
+---
+
+## 8. `train.py` — Optional YOLOv8 Fine-Tuning
 
 **Purpose:** Fine-tune YOLOv8 on a custom dog dataset for better recall on specific scenes.
 
@@ -143,11 +232,13 @@ python run_demo_cpu.py --source video.mp4 --model runs/train/dogvision/weights/b
 
 ## Quick Reference Table
 
-| Script | GPU Needed? | Input | Output | Speed (CPU) |
-|--------|------------|-------|--------|-------------|
+| Script | GPU Needed? | Input | Output | Speed |
+|--------|------------|-------|--------|-------|
 | `run_demo_cpu.py` | No | 1 video | `dogvision_output.mp4` + events + summary | ~2-5 FPS |
+| `run_demo_gpu.py` | Yes (CUDA) | 1 video | `dogvision_output.mp4` + events + summary | 25+ FPS |
 | `run_multi_stream.py` | No | 1-4 videos | `multi_stream_output.mp4` + events + summary | ~1-3 FPS |
 | `demo.py` | Yes (CUDA) | 1 video | `annotated.mp4` + parquet + analytics | 25+ FPS |
+| `generate_report.py` | No | None | `DogVision_GPU_Pipeline_Report.docx` | Instant |
 | `benchmark.py` | Yes (CUDA) | 1 video | Console table (GPU vs CPU) | N/A |
 | `train.py` | Yes (CUDA) | Dataset YAML | `best.pt` weights | N/A |
 

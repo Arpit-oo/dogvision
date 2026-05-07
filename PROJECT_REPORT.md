@@ -68,7 +68,7 @@ The system performs:
 │  • Overlap/IoU (25%)    │  │  • Check current time vs allowed window │
 │  • Lunge detect (25%)   │  │  • Person outside window → violation    │
 │  • Sustained (20%)      │  │                                         │
-│  Score ≥ 0.55 = alert   │  │  Output: AccessViolation events         │
+│  Score ≥ 0.40 = alert   │  │  Output: AccessViolation events         │
 │                         │  │                                         │
 │  Output: BiteEvent      │  │                                         │
 └────────────┬────────────┘  └──────────────────┬──────────────────────┘
@@ -179,11 +179,11 @@ The system performs:
 |------|-------|-------------|
 | `behavior/__init__.py` | 2 | Exports `BiteRiskAnalyzer` + `AccessController` |
 | `behavior/bite_detector.py` | ~130 | **Dog bite/aggression risk analyzer.** Stateful per dog-person pair: |
-| | | • **Factor 1 — Proximity (30%):** dog-person center distance ÷ dog bbox diagonal. Score 1.0 when touching, 0.0 beyond 1.5× diagonal. |
-| | | • **Factor 2 — Overlap (25%):** IoU between dog and person bboxes. Any overlap triggers score. |
-| | | • **Factor 3 — Lunge (25%):** tracks dog bbox area over last 4 frames. >35% area growth = dog moving toward camera/person rapidly. |
-| | | • **Factor 4 — Sustained contact (20%):** frame counter increments when proximity >0.3 or overlap detected. Decays when pair separates. |
-| | | • Composite score ≥ 0.55 → `BiteEvent` emitted with reason tags (close_proximity, physical_contact, lunge_detected, sustained_contact). |
+| | | • **Factor 1 — Proximity (30%):** dog-person center distance ÷ dog bbox diagonal. Score 1.0 when touching, 0.0 beyond 2.0× diagonal. |
+| | | • **Factor 2 — Overlap (25%):** IoU between dog and person bboxes. Overlap above 0.03 triggers score. |
+| | | • **Factor 3 — Lunge (25%):** tracks dog bbox area over last 4 frames. >25% area growth = dog moving toward camera/person rapidly. |
+| | | • **Factor 4 — Sustained contact (20%):** frame counter increments when proximity >0.3 or overlap detected. Decays when pair separates. Sustained threshold: 3 frames. |
+| | | • Composite score ≥ 0.40 → `BiteEvent` emitted with reason tags (close_proximity, physical_contact, lunge_detected, sustained_contact). |
 | | | • Stale pairs (no longer visible) decay and are cleaned up. |
 | `behavior/access_control.py` | ~80 | **Time-based person access control.** |
 | | | • Loads `configs/access_schedule.yaml` — maps `stream_id` → list of `{start, end}` time windows. |
@@ -247,7 +247,7 @@ The system performs:
 |------|-------|-------------|
 | `utils/color.py` | ~8 | **Deterministic track-ID → BGR color.** Golden ratio hash → HSV → BGR. Same dog = same color every run. |
 | `utils/draw.py` | ~100 | **Full annotation renderer.** |
-| | | • `draw_dogs()`: green bounding boxes + `dog#ID conf` label |
+| | | • `draw_dogs()`: green bounding boxes + `dog` label (no ID/conf, per user preference) |
 | | | • `draw_persons()`: teal bounding boxes + `person#ID conf` label |
 | | | • `draw_bite_alerts()`: red line between dog and person centers + "BITE RISK 68%" label + thick red box on dog |
 | | | • `draw_access_violations()`: orange box + "UNAUTHORIZED @ 23:15:02" label |
@@ -268,12 +268,15 @@ The system performs:
 | | | • Route detections by class |
 | | | • Dog pipeline: `BiteRiskAnalyzer.analyze()` |
 | | | • Person pipeline: `AccessController.check()` |
-| | | • Ghost-box persistence (10 frames) for smooth dog tracking |
+| | | • Ghost-box persistence (30 frames) for smooth dog tracking |
 | | | • Full annotation rendering (dogs, persons, bite alerts, access violations, HUD) |
 | | | • Event logging with periodic flush |
 | | | • Summary JSON at end |
+| `run_demo_gpu.py` | ~180 | **GPU demo entry point for presentation.** Full GPU pipeline with TensorRT FP16, CuPy ring buffer, cuDF analytics. CLI flags: `--device`, `--no-trt`. CUDA validation + auto-export on startup. |
+| `run_multi_stream.py` | ~200 | **Multi-stream 2×2 CCTV grid.** Processes 1–4 videos simultaneously with independent trackers, bite analyzers, and access controllers per stream. Stitches into 1280×720 grid. |
 | `benchmark.py` | ~90 | **CPU vs GPU benchmark.** Runs same video twice: GPU (PyTorch CUDA / TRT FP16) then CPU (PyTorch CPU FP32). Reports FPS, mean/p50/p95 latency, speedup multiplier. |
 | `train.py` | ~40 | **Optional YOLOv8 fine-tune.** Trains on a custom dog dataset in YOLO format. Outputs `best.pt` for use with `--weights`. |
+| `generate_report.py` | ~300 | **Academic Word report generator.** Creates a 16-section `.docx` report with architecture diagrams, GPU stack tables, and performance metrics for professor submission. |
 
 ---
 
@@ -410,8 +413,11 @@ vaibhav/
 │   ├── default.yaml             → GPU config (model, tracker, analytics, behavior, output)
 │   ├── cpu.yaml                 → CPU config (no TRT, no FP16)
 │   └── access_schedule.yaml     → per-camera authorized time windows
-├── demo.py                      → GPU entry point
+├── demo.py                      → GPU entry point (threaded pipeline)
 ├── run_demo_cpu.py              → CPU MVP (full dual pipeline)
+├── run_demo_gpu.py              → GPU demo (TRT FP16 + CuPy + cuDF)
+├── run_multi_stream.py          → multi-stream 2×2 CCTV grid
+├── generate_report.py           → academic Word report generator
 ├── benchmark.py                 → GPU vs CPU benchmark
 ├── train.py                     → optional YOLOv8 fine-tune
 ├── environment.yml              → conda env (RAPIDS + PyTorch)
@@ -419,7 +425,12 @@ vaibhav/
 ├── plan.md                      → design spec
 ├── README.md                    → project overview
 ├── HOW_TO_TRAIN_AND_RUN.md      → setup + run + benchmark + training guide
-└── PROJECT_REPORT.md            → this file
+├── PROJECT_REPORT.md            → this file
+├── PIPELINE_WALKTHROUGH.md      → frame-by-frame GPU pipeline flow
+├── SCRIPTS_GUIDE.md             → per-script usage + CLI flags
+├── MODEL_JUSTIFICATION.md       → pretrained vs custom training rationale
+├── GPU_ACCELERATION_MAP.md      → GPU tech → file:line mapping
+└── UNAUTHORIZED_ACCESS_EXPLAINED.md → access control deep-dive
 ```
 
 ---

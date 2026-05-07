@@ -216,11 +216,11 @@ def main() -> None:
     ap = argparse.ArgumentParser("dogvision-multi")
     ap.add_argument("--sources", nargs="+", required=True,
                     help="1-4 video file paths, webcam indices, or RTSP URLs")
-    ap.add_argument("--model", default="yolov8s.pt",
-                    help="YOLOv8 weights (use yolov8s for speed with 4 streams)")
-    ap.add_argument("--imgsz", type=int, default=640,
-                    help="YOLO input size (lower = faster for multi-stream)")
-    ap.add_argument("--conf", type=float, default=0.30,
+    ap.add_argument("--model", default="yolov8m.pt",
+                    help="YOLOv8 weights (yolov8m for accuracy, yolov8s for speed)")
+    ap.add_argument("--imgsz", type=int, default=960,
+                    help="YOLO input size (larger = better recall)")
+    ap.add_argument("--conf", type=float, default=0.25,
                     help="Detection confidence threshold")
     ap.add_argument("--access-config", default="configs/access_schedule.yaml",
                     help="Per-camera access schedule YAML")
