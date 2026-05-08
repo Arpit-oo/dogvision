@@ -75,6 +75,20 @@ def add_figure_caption(doc, text):
     p.paragraph_format.space_after = Pt(8)
 
 
+def add_figure(doc, image_path, caption, width_inches=5.5):
+    """Add an image with centered caption below it."""
+    from pathlib import Path
+    img_path = Path(image_path)
+    if img_path.exists():
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run()
+        run.add_picture(str(img_path), width=Inches(width_inches))
+        add_figure_caption(doc, caption)
+    else:
+        doc.add_paragraph(f'[Image not found: {image_path}]')
+
+
 def main():
     doc = Document()
 
@@ -229,54 +243,15 @@ def main():
         'is stored in a GPU-resident CuPy ring buffer for cuDF analytics.'
     )
 
-    add_code_block(doc,
-        'VIDEO SOURCE\n'
-        '      |\n'
-        '      v\n'
-        '+----------------------------------------------------+\n'
-        '|  STAGE 1: YOLOv8 TensorRT FP16 + ByteTrack [1][3]  |\n'
-        '|  Single CUDA forward pass: detect dog + person       |\n'
-        '|  cuDNN [6] convolutions + CUDA NMS + tracker         |\n'
-        '+----------------------------------------------------+\n'
-        '      |\n'
-        '  Route by COCO class (cls==16: dog, cls==0: person)\n'
-        '      |\n'
-        '  +---+---+\n'
-        '  |       |\n'
-        '  v       v\n'
-        '+--------+ +----------------+\n'
-        '| DOG    | | PERSON         |\n'
-        '| Bite   | | Access Control |\n'
-        '| Risk   | | (time-based    |\n'
-        '| Score  | |  per-camera)   |\n'
-        '+--------+ +----------------+\n'
-        '  |              |\n'
-        '  v              v\n'
-        '+----------------------------------------------------+\n'
-        '|  CuPy Ring Buffer [5] (GPU O(1) append)             |\n'
-        '|  cuDF Analytics [4] (GPU groupby/agg every 30 fr)   |\n'
-        '|  Event Log (bite alerts + access violations)         |\n'
-        '+----------------------------------------------------+\n'
-        '      |\n'
-        '      v\n'
-        '  Annotated Video + Events JSON + Summary JSON\n'
-    )
-    add_figure_caption(doc, 'Fig. 1: End-to-end pipeline architecture showing GPU inference, '
-                            'dual-pipeline routing, and output generation.')
+    add_figure(doc, 'out/diagrams/fig1_pipeline_architecture.png',
+               'Fig. 1: End-to-end pipeline architecture showing GPU inference, '
+               'dual-pipeline routing, and output generation.', width_inches=6.0)
 
-    add_heading_styled(doc, 'Three-Thread GPU Pipeline', level=2)
-    add_code_block(doc,
-        'Thread 1 (DECODE):     Video -> GPU memory -> bounded queue (maxlen=4)\n'
-        '                       CUDA Stream 1: frame upload overlaps with inference\n'
-        '\n'
-        'Thread 2 (INFERENCE):  YOLOv8 TRT FP16 -> ByteTrack -> CuPy ring append\n'
-        '                       CUDA Stream 2: inference overlaps with next decode\n'
-        '\n'
-        'Thread 3 (ANALYTICS):  cuDF snapshot -> groupby/agg -> HUD + video write\n'
-        '                       CUDA Stream 3: analytics overlaps with inference\n'
-    )
-    add_figure_caption(doc, 'Fig. 2: Three-thread pipeline with CUDA stream overlap. '
-                            'Thread 1 uploads frame N+1 while Thread 2 runs inference on frame N.')
+    add_heading_styled(doc, 'Complete Working Flowchart', level=2)
+    add_figure(doc, 'out/diagrams/fig2_complete_flowchart.png',
+               'Fig. 2: Complete working flowchart from video input through GPU inference, '
+               'behavior analysis, analytics, and output generation.', width_inches=5.0)
+
     doc.add_paragraph(
         'CUDA Streams enable overlap: while Thread 2 runs inference on frame N, Thread 1 '
         'uploads frame N+1, and Thread 3 processes analytics from frame N-1. This hides '
@@ -313,6 +288,12 @@ def main():
         'of FP32. The accuracy difference for object detection is negligible (less than '
         '0.1% mAP reduction on COCO validation).'
     )
+
+    add_heading_styled(doc, 'TensorRT Optimization Pipeline', level=2)
+    add_figure(doc, 'out/diagrams/fig4_tensorrt_optimization.png',
+               'Fig. 6: TensorRT optimization pipeline showing layer fusion, FP16 quantization, '
+               'and kernel auto-tuning. Result: 2-3x faster than PyTorch, 17x faster than CPU.',
+               width_inches=5.5)
 
     # ==================== 5. DETECTION ====================
     add_heading_styled(doc, '5. Detection and Tracking Methodology', level=1)
@@ -395,20 +376,10 @@ def main():
         caption='Table 4: Bite risk scoring factors with thresholds'
     )
 
-    add_heading_styled(doc, '6.2 Scoring Formula', level=2)
-    add_code_block(doc,
-        'risk = 0.30 x proximity_score     (range: 0.0 to 1.0)\n'
-        '     + 0.25 x overlap_score       (range: 0.0 to 1.0)\n'
-        '     + 0.25 x lunge_score         (range: 0.0 to 1.0)\n'
-        '     + 0.20 x sustained_score     (range: 0.0 to 1.0)\n'
-        '\n'
-        'if risk >= 0.40:\n'
-        '    emit BiteEvent\n'
-        '    draw red alert line between dog and person centers\n'
-        '    display "BITE RISK XX%" label at midpoint\n'
-        '    log event to out/events.json\n'
-    )
-    add_figure_caption(doc, 'Fig. 3: Bite risk composite scoring formula with threshold.')
+    add_heading_styled(doc, '6.2 Scoring Diagram', level=2)
+    add_figure(doc, 'out/diagrams/fig6_bite_risk_scoring.png',
+               'Fig. 3: Bite risk 4-factor scoring system showing inputs from GPU detection, '
+               'weighted combination, and alert threshold at 0.40.', width_inches=5.5)
 
     doc.add_paragraph(
         'Design rationale: a dog can trigger a bite alert without physically touching the '
@@ -427,25 +398,12 @@ def main():
         '"UNAUTHORIZED @ HH:MM:SS" label.'
     )
 
-    add_code_block(doc,
-        'GPU detects person on stream_id S\n'
-        '      |\n'
-        '      v\n'
-        'Rules exist for S?  --NO--> ALLOW (no rules = open access)\n'
-        '      |\n'
-        '     YES\n'
-        '      |\n'
-        '      v\n'
-        'Current time within allowed window?\n'
-        '      |\n'
-        '     YES --> ALLOW (authorized)\n'
-        '      |\n'
-        '     NO  --> ACCESS VIOLATION\n'
-        '            --> orange bounding box on frame\n'
-        '            --> "UNAUTHORIZED @ 23:15:02" label\n'
-        '            --> event logged to out/events.json\n'
+    doc.add_paragraph(
+        'Decision flow: For each detected person, the system checks if rules exist for '
+        'that camera. If rules exist, it checks if the current wall-clock time falls within '
+        'any allowed window. If the time is outside all windows, an AccessViolation event is '
+        'generated with an orange bounding box and "UNAUTHORIZED @ HH:MM:SS" label on the frame.'
     )
-    add_figure_caption(doc, 'Fig. 4: Access control decision flow for each detected person.')
 
     doc.add_paragraph(
         'The system handles overnight windows (e.g., 22:00 to 06:00) by checking '
@@ -490,30 +448,10 @@ def main():
     )
 
     add_heading_styled(doc, '8.3 Data Residency', level=2)
-    add_code_block(doc,
-        'DISK              CPU RAM              GPU VRAM\n'
-        '----              -------              --------\n'
-        'video.mp4 ------> BGR frame\n'
-        '                     |  cudaMemcpy (~1ms)\n'
-        '                     +---------------> GPU tensor (FP16)\n'
-        '                                          |  YOLOv8 inference\n'
-        '                                          v\n'
-        '                                      Detections (GPU)\n'
-        '                                          |  ring_buffer.append\n'
-        '                                          v\n'
-        '                                      CuPy arrays (GPU)\n'
-        '                                          |  snapshot()\n'
-        '                                          v\n'
-        '                                      cuDF DataFrame (GPU)\n'
-        '                                          |  groupby/agg\n'
-        '                                          v\n'
-        '                                      Analytics (GPU)\n'
-        '                     <--------------------+\n'
-        '                     |  .to_dict() (~0.1ms)\n'
-        '                  Stats dict -------> HUD overlay\n'
-    )
-    add_figure_caption(doc, 'Fig. 5: Data residency map. Data stays on GPU from upload through analytics, '
-                            'minimizing PCIe bus transfers. Only tiny results come back to CPU.')
+    add_figure(doc, 'out/diagrams/fig5_data_residency.png',
+               'Fig. 4: Data residency map showing CPU RAM vs GPU VRAM. Data crosses the PCIe bus '
+               'only twice: frame upload (1ms) and stats retrieval (0.1ms). All heavy computation '
+               'stays on GPU.', width_inches=5.5)
 
     # ==================== 9. MULTI-STREAM ====================
     add_heading_styled(doc, '9. Multi-Stream CCTV Grid Processing', level=1)
@@ -524,20 +462,10 @@ def main():
         'spaces, separate bite risk analyzers, and per-camera access control rules.'
     )
 
-    add_code_block(doc,
-        '+----------+----------+\n'
-        '|  CAM 0   |  CAM 1   |     Each cell: 640x360 pixels\n'
-        '| YOLOv8   | YOLOv8   |     Each cell: independent tracker\n'
-        '| Bite     | Bite     |     Each cell: independent bite analyzer\n'
-        '| Access   | Access   |     Each cell: per-camera access rules\n'
-        '+----------+----------+\n'
-        '|  CAM 2   |  CAM 3   |     Combined: single output video\n'
-        '| YOLOv8   | YOLOv8   |     Combined: merged event log\n'
-        '| Bite     | Bite     |     Combined: global FPS counter\n'
-        '| Access   | Access   |\n'
-        '+----------+----------+\n'
-    )
-    add_figure_caption(doc, 'Fig. 6: Multi-stream 2x2 CCTV grid with independent per-camera pipelines.')
+    add_figure(doc, 'out/diagrams/fig7_multistream_grid.png',
+               'Fig. 5: Multi-stream 2x2 CCTV grid architecture with independent per-camera '
+               'detection, tracking, bite risk analysis, and access control pipelines.',
+               width_inches=5.0)
 
     # ==================== 10. DATASETS ====================
     add_heading_styled(doc, '10. Datasets and Model Justification', level=1)
@@ -589,6 +517,11 @@ def main():
         '- VRAM: GPU video memory. Lower usage means capacity for higher resolution or more streams.'
     )
 
+    add_figure(doc, 'out/diagrams/fig3_gpu_vs_cpu.png',
+               'Fig. 7: GPU vs CPU performance comparison. Left: FPS by model variant with '
+               'real-time threshold at 25 FPS. Right: latency comparison on log scale.',
+               width_inches=6.0)
+
     add_heading_styled(doc, '11.2 Analytics Performance', level=2)
     add_table(doc,
         ['Component', 'GPU', 'CPU Baseline', 'Speedup'],
@@ -617,6 +550,11 @@ def main():
         ],
         caption='Table 9: Detection results across 6 evaluation runs (CPU, yolov8m, 960px, conf=0.25)'
     )
+
+    add_figure(doc, 'out/diagrams/fig8_evaluation_results.png',
+               'Fig. 8: Evaluation results across 6 test videos showing detection counts, '
+               'bite alerts, and access violations per video (log scale).',
+               width_inches=5.5)
 
     doc.add_paragraph(
         'Key observations:\n'
@@ -745,7 +683,7 @@ def main():
         p.paragraph_format.space_after = Pt(4)
 
     # ==================== SAVE ====================
-    output_path = 'out/DogVision_Project_Report.docx'
+    output_path = 'out/DogVision_Report_Final.docx'
     doc.save(output_path)
     print(f'Report saved to {output_path}')
 
