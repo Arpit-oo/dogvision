@@ -1,4 +1,4 @@
-# GPU Acceleration Map — Where Each Technology Is Used
+# GPU Acceleration Map  - Where Each Technology Is Used
 
 This document maps **every GPU acceleration technology** to the **exact file, function, and line** where it's applied in the codebase.
 
@@ -9,13 +9,13 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 | File | Function/Line | What It Does |
 |------|--------------|-------------|
 | `detection/yolo.py` | `DogDetector.__init__()` → `device=0` | Loads YOLOv8 model onto GPU device 0 |
-| `detection/yolo.py` | `DogDetector.track()` → `device=self.device` | Runs inference on GPU — forward pass through YOLOv8 conv layers |
+| `detection/yolo.py` | `DogDetector.track()` → `device=self.device` | Runs inference on GPU  - forward pass through YOLOv8 conv layers |
 | `detection/yolo.py` | `DogDetector.detect_only()` → `device=self.device` | Same GPU inference for benchmark mode |
-| `detection/yolo.py` | `@torch.inference_mode()` decorator | Disables autograd gradient tracking — zero overhead for inference |
+| `detection/yolo.py` | `@torch.inference_mode()` decorator | Disables autograd gradient tracking  - zero overhead for inference |
 | `run_demo_cpu.py` | `model.track(device="cpu")` | CPU fallback path (still uses PyTorch, just CPU device) |
 | `benchmark.py` | `_bench_gpu()` vs `_bench_cpu()` | Compares GPU device=0 vs device="cpu" for the same model |
 
-**What PyTorch CUDA accelerates:** Matrix multiplications in convolutional layers, batch normalization, activation functions — all run on GPU CUDA cores instead of CPU.
+**What PyTorch CUDA accelerates:** Matrix multiplications in convolutional layers, batch normalization, activation functions  - all run on GPU CUDA cores instead of CPU.
 
 ---
 
@@ -23,10 +23,10 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 
 | File | How It's Used |
 |------|--------------|
-| `detection/yolo.py` | **Implicit** — PyTorch automatically uses cuDNN for convolutions when CUDA is available. No explicit code needed. |
+| `detection/yolo.py` | **Implicit**  - PyTorch automatically uses cuDNN for convolutions when CUDA is available. No explicit code needed. |
 | `environment.yml` | `cudatoolkit=12.2` installs cuDNN as a dependency |
 
-**What cuDNN accelerates:** Winograd/FFT convolution algorithms, pooling, normalization — cuDNN selects the fastest algorithm for each layer shape on your specific GPU.
+**What cuDNN accelerates:** Winograd/FFT convolution algorithms, pooling, normalization  - cuDNN selects the fastest algorithm for each layer shape on your specific GPU.
 
 ---
 
@@ -69,7 +69,7 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 | `analytics/roi_hist.py` | `roi_histograms()` → `cp.bincount()` | Computes 16³-bin HSV histograms per dog ROI on GPU |
 | `analytics/roi_hist.py` | `cp.asnumpy(out)` | Final transfer GPU→CPU only for the small histogram result |
 
-**What CuPy accelerates:** Array allocation, indexing, concatenation, math operations — all run on GPU CUDA cores. Replaces NumPy for GPU-resident data.
+**What CuPy accelerates:** Array allocation, indexing, concatenation, math operations  - all run on GPU CUDA cores. Replaces NumPy for GPU-resident data.
 
 ---
 
@@ -78,7 +78,7 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 | File | Where Referenced |
 |------|-----------------|
 | `configs/default.yaml` | Listed in GPU stack |
-| `plan.md` | Architecture spec — "Numba CUDA for bespoke GPU kernels" |
+| `plan.md` | Architecture spec  - "Numba CUDA for bespoke GPU kernels" |
 | `analytics/roi_hist.py` | ROI extraction kernels (CuPy used instead for MVP simplicity) |
 | `requirements.txt` | `numba>=0.59.0` |
 
@@ -90,15 +90,15 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 
 | File | Function/Line | What It Does |
 |------|--------------|-------------|
-| `analytics/window.py` | `compute()` → `df.groupby(["stream","frame"])["track_id"].nunique()` | Dogs per frame per stream — groupby+count on GPU |
+| `analytics/window.py` | `compute()` → `df.groupby(["stream","frame"])["track_id"].nunique()` | Dogs per frame per stream  - groupby+count on GPU |
 | `analytics/window.py` | `compute()` → `df.groupby("track_id").agg(...)` | Per-dog trajectory stats (first/last seen, bbox deltas) on GPU |
-| `analytics/window.py` | `compute()` → `df["track_id"].nunique()` | Unique dog count — distinct count on GPU |
-| `analytics/window.py` | `compute()` → arithmetic on cuDF Series | Speed calculation (dx²+dy²)^0.5 / dt — all GPU vectorized |
+| `analytics/window.py` | `compute()` → `df["track_id"].nunique()` | Unique dog count  - distinct count on GPU |
+| `analytics/window.py` | `compute()` → arithmetic on cuDF Series | Speed calculation (dx²+dy²)^0.5 / dt  - all GPU vectorized |
 | `analytics/window.py` | `compute()` → `.where()`, `.fillna()` | Conditional logic and null handling on GPU |
 | `analytics/ring_buffer.py` | `snapshot()` → `cudf.DataFrame(data)` | Materialize GPU arrays into cuDF DataFrame |
 | `pipeline/orchestrator.py` | `_consumer()` → `self.window.compute(snap)` | Triggers cuDF analytics every 30 frames |
 
-**What cuDF accelerates:** groupby, aggregation, joins, filtering, sorting, nunique — all operations that pandas does on CPU, cuDF does on GPU. For 54,000-row DataFrames, cuDF is 10-50× faster than pandas.
+**What cuDF accelerates:** groupby, aggregation, joins, filtering, sorting, nunique  - all operations that pandas does on CPU, cuDF does on GPU. For 54,000-row DataFrames, cuDF is 10-50× faster than pandas.
 
 ---
 
@@ -110,7 +110,7 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 | `utils/video.py` | `iter_frames()` | Generator yielding decoded BGR frames |
 | `run_demo_cpu.py` | `cap = cv2.VideoCapture(source)` | Same decode in CPU demo |
 
-**What NVDEC accelerates:** Hardware video decoding on NVIDIA GPU — frees CPU cores for other work. Requires OpenCV built with CUDA support (optional).
+**What NVDEC accelerates:** Hardware video decoding on NVIDIA GPU  - frees CPU cores for other work. Requires OpenCV built with CUDA support (optional).
 
 ---
 
@@ -123,7 +123,7 @@ This document maps **every GPU acceleration technology** to the **exact file, fu
 | `pipeline/orchestrator.py` | `threading.Thread(target=self._inference)` | Inference thread runs YOLO on GPU while decode reads next frame |
 | `pipeline/orchestrator.py` | `threading.Thread(target=self._consumer)` | Analytics thread processes results while inference runs on next frame |
 
-**What CUDA streams accelerate:** GPU operations from different threads can overlap — decode uploads frame N+1 to GPU while inference runs on frame N. This hides PCIe transfer latency.
+**What CUDA streams accelerate:** GPU operations from different threads can overlap  - decode uploads frame N+1 to GPU while inference runs on frame N. This hides PCIe transfer latency.
 
 ---
 

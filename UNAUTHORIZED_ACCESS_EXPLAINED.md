@@ -1,4 +1,4 @@
-# Unauthorized Access Detection — How It Works
+# Unauthorized Access Detection  - How It Works
 
 ## Overview
 
@@ -84,7 +84,7 @@ allowed_hours:
     end: "06:00"   # Night shift: 10 PM to 6 AM the next day
 ```
 
-The system checks `now >= 22:00 OR now <= 06:00` — both sides of midnight covered.
+The system checks `now >= 22:00 OR now <= 06:00`  - both sides of midnight covered.
 
 ---
 
@@ -176,7 +176,7 @@ EventLog.flush()
 ### File: `run_demo_cpu.py` (integration point)
 
 ```python
-# Line ~223: Person Pipeline — access control
+# Line ~223: Person Pipeline  - access control
 access_violations = access_ctrl.check(
     persons, args.stream_id, frame_idx, t_ns
 )
@@ -201,7 +201,7 @@ cameras:
         end: "04:00"   # Only 1 hour allowed → most times trigger violations
 ```
 
-Run the demo — every person detection will be flagged as unauthorized.
+Run the demo  - every person detection will be flagged as unauthorized.
 
 ### Method 2: Run During Off-Hours
 
@@ -234,7 +234,7 @@ it integrates with the GPU-accelerated pipeline:
 2. **ByteTrack** assigns persistent person IDs on GPU
 3. **Event metadata** (frame, bbox, track_id) comes from GPU inference results
 4. **Event aggregation** uses cuDF on GPU when the full GPU pipeline is active
-5. **Access control check** is the only CPU step — a simple time comparison
+5. **Access control check** is the only CPU step  - a simple time comparison
 
 The GPU does the heavy lifting (detecting and tracking persons at 25+ FPS);
 the access controller just applies a business rule to the GPU's output.

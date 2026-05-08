@@ -1,4 +1,18 @@
-# DogVision — Complete Project Overview
+# DogVision - Complete Project Overview
+
+**Course:** Accelerated Data Science
+**Instructor:** Dr. Manisha Malik
+
+**Submitted By:**
+
+| Name | Roll Number |
+|------|-------------|
+| Priya Sharma | 102316008 |
+| Vaibhav Sundriyal | 102316077 |
+| Shikhar Saxena | 102316078 |
+| Arpit Walia | 102316109 |
+
+---
 
 A GPU-accelerated real-time video surveillance system that detects dogs and persons, analyzes dog bite/aggression risk, and enforces time-based access control per camera.
 
@@ -10,14 +24,14 @@ Given any video input (file, webcam, RTSP stream), the system:
 
 1. **Detects dogs and persons** in every frame using YOLOv8 deep learning
 2. **Tracks each individual** across frames with persistent IDs (ByteTrack)
-3. **Analyzes bite risk** when a dog is near a person — scores proximity, overlap, lunging, and sustained contact
+3. **Analyzes bite risk** when a dog is near a person  - scores proximity, overlap, lunging, and sustained contact
 4. **Flags unauthorized access** when a person appears outside allowed hours for that camera
 5. **Outputs annotated video** with color-coded bounding boxes, alert lines, and a live stats HUD
 6. **Logs all events** to JSON for review via the web dashboard
 
 ---
 
-## How It Runs — Step by Step
+## How It Runs  - Step by Step
 
 ### 1. Video Input
 
@@ -27,7 +41,7 @@ The system reads frames from the source video one at a time using OpenCV.
 Video file (.mp4) → cv2.VideoCapture → BGR frame (numpy array)
 ```
 
-**File:** `utils/video.py` — frame iterator with reconnection support
+**File:** `utils/video.py`  - frame iterator with reconnection support
 **See also:** [PIPELINE_WALKTHROUGH.md](PIPELINE_WALKTHROUGH.md) for the full frame-by-frame GPU flow
 
 ### 2. Detection + Tracking (Single YOLO Pass)
@@ -44,8 +58,8 @@ Frame → YOLOv8 (classes=[0, 16]) → detections with bounding boxes + confiden
 - Input resolution: 960px for best recall on small/distant objects
 - Confidence threshold: 0.25 (catches most dogs without too many false positives)
 
-**File:** `detection/yolo.py` — YOLOv8 wrapper with TensorRT FP16 export
-**File:** `tracking/tracker.py` — per-ID trajectory accumulator
+**File:** `detection/yolo.py`  - YOLOv8 wrapper with TensorRT FP16 export
+**File:** `tracking/tracker.py`  - per-ID trajectory accumulator
 **See also:** [MODEL_JUSTIFICATION.md](MODEL_JUSTIFICATION.md) for why we use pretrained instead of custom-trained
 
 ### 3. Detection Routing
@@ -58,11 +72,11 @@ Detections
     └── cls == 0  (person) → Person Pipeline (access control)
 ```
 
-Both pipelines run on the same frame's detections. A single YOLO pass feeds both — no duplicate inference.
+Both pipelines run on the same frame's detections. A single YOLO pass feeds both  - no duplicate inference.
 
-**File:** `run_demo_cpu.py` lines 155–188 — routing logic
+**File:** `run_demo_cpu.py` lines 155–188  - routing logic
 
-### 4a. Dog Pipeline — Bite Risk Analysis
+### 4a. Dog Pipeline  - Bite Risk Analysis
 
 Every dog-person pair is scored for aggression risk using 4 weighted factors:
 
@@ -79,14 +93,14 @@ risk = 0.30 × proximity + 0.25 × overlap + 0.25 × lunge + 0.20 × sustained
 
 **If risk ≥ 0.40 → BITE RISK ALERT** is emitted with reason tags (close_proximity, physical_contact, lunge_detected, sustained_contact).
 
-Key design: a dog can trigger a bite alert **without physically touching** the person — just by being close + approaching fast + staying near. This catches aggressive approach behavior, not just contact.
+Key design: a dog can trigger a bite alert **without physically touching** the person  - just by being close + approaching fast + staying near. This catches aggressive approach behavior, not just contact.
 
 The analyzer maintains state per dog-person pair across frames. When a pair is no longer visible, their proximity history decays and is cleaned up.
 
-**File:** `behavior/bite_detector.py` — the full 4-factor scoring engine
+**File:** `behavior/bite_detector.py`  - the full 4-factor scoring engine
 **See also:** [PIPELINE_WALKTHROUGH.md](PIPELINE_WALKTHROUGH.md) for the scoring formula diagram
 
-### 4b. Person Pipeline — Access Control
+### 4b. Person Pipeline  - Access Control
 
 Each detected person is checked against per-camera time-based rules loaded from a YAML config file.
 
@@ -101,9 +115,9 @@ Person detected on Camera 0 at 23:15
 - Handles overnight windows (e.g., 22:00–06:00 crosses midnight)
 - Gracefully disabled if no config file is provided
 
-**File:** `behavior/access_control.py` — time-based person authorization
-**Config:** `configs/access_schedule.yaml` — per-camera allowed hours
-**Config:** `configs/access_schedule_restricted.yaml` — night-only window for testing
+**File:** `behavior/access_control.py`  - time-based person authorization
+**Config:** `configs/access_schedule.yaml`  - per-camera allowed hours
+**Config:** `configs/access_schedule_restricted.yaml`  - night-only window for testing
 **See also:** [UNAUTHORIZED_ACCESS_EXPLAINED.md](UNAUTHORIZED_ACCESS_EXPLAINED.md) for full access control deep-dive
 
 ### 5. Ghost Dog Persistence
@@ -115,7 +129,7 @@ When ByteTrack temporarily loses a dog (brief occlusion, turned away from camera
 
 Ghost bboxes are drawn at 50% confidence to indicate they're estimated positions.
 
-**File:** `run_demo_cpu.py` lines 189–208 — ghost persistence logic
+**File:** `run_demo_cpu.py` lines 189–208  - ghost persistence logic
 
 ### 6. Annotation Rendering
 
@@ -131,8 +145,8 @@ Each frame gets layered annotations drawn on top:
 
 The HUD shows live stats: FPS, current dog/person count, unique dogs seen, bite alert total, access violation total, frame number. Bite/access counters turn red/orange when non-zero.
 
-**File:** `utils/draw.py` — all annotation rendering functions
-**File:** `utils/color.py` — deterministic track-ID → color mapping (same dog = same color)
+**File:** `utils/draw.py`  - all annotation rendering functions
+**File:** `utils/color.py`  - deterministic track-ID → color mapping (same dog = same color)
 
 ### 7. Output
 
@@ -146,7 +160,7 @@ The system produces these artifacts:
 
 ---
 
-## Entry Points — Which Script Does What
+## Entry Points  - Which Script Does What
 
 | Script | Purpose | When to Use |
 |--------|---------|-------------|
@@ -154,7 +168,7 @@ The system produces these artifacts:
 | `run_demo_gpu.py` | GPU demo with TensorRT FP16, CuPy ring buffer, cuDF analytics | If GPU is available |
 | `run_multi_stream.py` | 2×2 CCTV grid processing 1–4 videos simultaneously | Multi-camera demo |
 | `demo.py` | Threaded GPU pipeline orchestrator | Production GPU mode |
-| `dashboard.py` | **Web dashboard** at localhost:5000 — view results, upload videos | Presenting results to teacher |
+| `dashboard.py` | **Web dashboard** at localhost:5000  - view results, upload videos | Presenting results to teacher |
 | `train_and_evaluate.py` | Train custom model, compare with pretrained, generate report | Showing training attempt |
 | `benchmark.py` | GPU vs CPU speed comparison | Performance metrics |
 | `generate_report.py` | Academic Word document generator | Professor submission |
@@ -164,7 +178,7 @@ The system produces these artifacts:
 
 ---
 
-## Project Structure — What Each Folder Contains
+## Project Structure  - What Each Folder Contains
 
 ```
 vaibhav/
@@ -227,14 +241,14 @@ The project is designed as a GPU-accelerated computing demonstration. Every stag
 | Analytics | cuDF groupby/agg (RAPIDS) | pandas |
 | Color histograms | CuPy BGR→HSV + bincount | Skipped |
 
-The CPU demo (`run_demo_cpu.py`) runs the full pipeline without GPU — same features, just slower (~1-2 FPS vs 25+ FPS on GPU).
+The CPU demo (`run_demo_cpu.py`) runs the full pipeline without GPU  - same features, just slower (~1-2 FPS vs 25+ FPS on GPU).
 
 **See also:** [GPU_ACCELERATION_MAP.md](GPU_ACCELERATION_MAP.md) for where each technology is used
 **See also:** [PIPELINE_WALKTHROUGH.md](PIPELINE_WALKTHROUGH.md) for the full GPU pipeline flow diagram
 
 ---
 
-## Model Choice — Why Pretrained
+## Model Choice  - Why Pretrained
 
 We use **pretrained YOLOv8m** (trained on COCO 2017 by Ultralytics) directly. No custom training needed because:
 
@@ -243,7 +257,7 @@ We use **pretrained YOLOv8m** (trained on COCO 2017 by Ultralytics) directly. No
 3. Project focus is GPU acceleration, not model accuracy
 4. Fine-tuning on a small custom dataset would overfit
 
-We **did attempt** training a custom model (`train_and_evaluate.py`) to compare — the pretrained model outperformed it due to COCO's larger and more diverse training data.
+We **did attempt** training a custom model (`train_and_evaluate.py`) to compare  - the pretrained model outperformed it due to COCO's larger and more diverse training data.
 
 **See also:** [MODEL_JUSTIFICATION.md](MODEL_JUSTIFICATION.md) for full rationale
 
@@ -274,15 +288,15 @@ Key observations:
 Run `python dashboard.py` and open `http://localhost:5000`.
 
 Three tabs:
-1. **Overview** — global stats across all runs + per-run cards with Video, Events, JSON buttons
-2. **Upload & Analyze** — drag & drop a video, runs pipeline, returns results with video playback
-3. **Event Logs** — browse events per run with filters (All / Bite Alerts / Access Violations)
+1. **Overview**  - global stats across all runs + per-run cards with Video, Events, JSON buttons
+2. **Upload & Analyze**  - drag & drop a video, runs pipeline, returns results with video playback
+3. **Event Logs**  - browse events per run with filters (All / Bite Alerts / Access Violations)
 
 Videos are auto-transcoded from mp4v to H.264 for browser playback.
 
 ---
 
-## CPU vs GPU — Why Both Exist
+## CPU vs GPU  - Why Both Exist
 
 ### Can we run entirely on GPU?
 
@@ -301,24 +315,24 @@ The CPU demo (`run_demo_cpu.py`) exists for **portability and ease of setup**:
 | Detection storage | GPU-resident arrays, O(1) append | In-memory Python dicts |
 | Requirements | NVIDIA GPU + CUDA 12.x + WSL2 + RAPIDS conda env | Just `pip install ultralytics torch opencv-python pyyaml` |
 | Setup time | ~30 minutes | ~2 minutes |
-| Portability | No — TensorRT engine is GPU-architecture specific | Yes — runs on any machine |
-| Real-time capable? | Yes — can process live cameras | No — too slow for real-time |
+| Portability | No  - TensorRT engine is GPU-architecture specific | Yes  - runs on any machine |
+| Real-time capable? | Yes  - can process live cameras | No  - too slow for real-time |
 
 ### Why the CPU path still matters
 
-1. **Reproducibility** — instructor can run the demo on any laptop without GPU
-2. **Same features** — detection, tracking, bite risk, access control all work identically
-3. **No driver headaches** — CUDA/cuDNN/TensorRT version mismatches are common pain points
-4. **Native Windows** — RAPIDS (cuDF) requires Linux or WSL2, CPU path runs on Windows directly
+1. **Reproducibility**  - instructor can run the demo on any laptop without GPU
+2. **Same features**  - detection, tracking, bite risk, access control all work identically
+3. **No driver headaches**  - CUDA/cuDNN/TensorRT version mismatches are common pain points
+4. **Native Windows**  - RAPIDS (cuDF) requires Linux or WSL2, CPU path runs on Windows directly
 
 ### Why the GPU path matters (the point of the project)
 
-1. **Real-time processing** — 25+ FPS enables live surveillance, not just offline video analysis
-2. **TensorRT FP16** — fuses Conv+BatchNorm+ReLU into a single CUDA kernel, quantizes FP32→FP16 for 2× memory bandwidth reduction. Result: 2-3× faster than PyTorch alone
-3. **CuPy ring buffer** — detection data stays on GPU memory with O(1) append. No per-frame CPU↔GPU transfer overhead
-4. **cuDF analytics** — rolling-window groupby/agg runs on GPU. For 54,000-row DataFrames, cuDF is 10-50× faster than pandas
-5. **Three-thread pipeline** — decode uploads frame N+1 to GPU while inference runs on frame N. CUDA streams hide PCIe transfer latency — GPU never idles waiting for data
-6. **Multi-stream batching** — process 4 cameras simultaneously with shared GPU inference
+1. **Real-time processing**  - 25+ FPS enables live surveillance, not just offline video analysis
+2. **TensorRT FP16**  - fuses Conv+BatchNorm+ReLU into a single CUDA kernel, quantizes FP32→FP16 for 2× memory bandwidth reduction. Result: 2-3× faster than PyTorch alone
+3. **CuPy ring buffer**  - detection data stays on GPU memory with O(1) append. No per-frame CPU↔GPU transfer overhead
+4. **cuDF analytics**  - rolling-window groupby/agg runs on GPU. For 54,000-row DataFrames, cuDF is 10-50× faster than pandas
+5. **Three-thread pipeline**  - decode uploads frame N+1 to GPU while inference runs on frame N. CUDA streams hide PCIe transfer latency  - GPU never idles waiting for data
+6. **Multi-stream batching**  - process 4 cameras simultaneously with shared GPU inference
 
 ### Performance comparison (RTX 3060, YOLOv8s, 640px)
 
@@ -333,9 +347,9 @@ At 1-2 FPS on CPU, it takes 10 minutes to process a 1-minute video. On GPU, same
 
 ---
 
-## How to Demo for Teacher — Step by Step
+## How to Demo for Teacher  - Step by Step
 
-### Option A: Browser Dashboard (Recommended — Easiest)
+### Option A: Browser Dashboard (Recommended  - Easiest)
 
 ```bash
 cd C:\code\vaibhav
@@ -344,11 +358,11 @@ python dashboard.py
 
 Open `http://localhost:5000` in browser. From there you can:
 
-1. **Overview tab** — show all past evaluation results (7 runs, 10K+ frames analyzed)
-2. **Click "Video"** on any card — watch annotated output with bounding boxes and alerts
-3. **Click "Events"** on any card — see bite risk + access violation event logs
-4. **Click "JSON"** on any card — view raw summary data
-5. **Upload & Analyze tab** — drag & drop any new video
+1. **Overview tab**  - show all past evaluation results (7 runs, 10K+ frames analyzed)
+2. **Click "Video"** on any card  - watch annotated output with bounding boxes and alerts
+3. **Click "Events"** on any card  - see bite risk + access violation event logs
+4. **Click "JSON"** on any card  - view raw summary data
+5. **Upload & Analyze tab**  - drag & drop any new video
    - Check "GPU Mode" to run on GPU with TensorRT FP16
    - Check "Restricted Access" to trigger unauthorized access detection
    - Watch progress bar as pipeline processes the video
@@ -356,37 +370,37 @@ Open `http://localhost:5000` in browser. From there you can:
 
 ### Option B: Command Line Demo
 
-**Step 1 — Show dog bite detection:**
+**Step 1  - Show dog bite detection:**
 ```bash
 python run_demo_cpu.py --source input/dogbite.mp4 --no-display
 ```
-Output: `out/dogvision_output.mp4` — open to show red BITE RISK alerts
+Output: `out/dogvision_output.mp4`  - open to show red BITE RISK alerts
 
-**Step 2 — Show access control (unauthorized person detection):**
+**Step 2  - Show access control (unauthorized person detection):**
 ```bash
 python run_demo_cpu.py --source "input/vidssave.com Man Caught Break Into House  Man Breaking into House Caught on Camera 1080P.mp4" --no-display --access-config configs/access_schedule_restricted.yaml
 ```
 Output: orange UNAUTHORIZED labels on detected persons
 
-**Step 3 — Show multi-camera grid:**
+**Step 3  - Show multi-camera grid:**
 ```bash
 python run_multi_stream.py --sources input/dogbite.mp4 "input/The CCTV People Demo 2.mp4" input/15440276_2160_3840_30fps.mp4 input/XlZXsvOuuRc.mp4 --no-display
 ```
-Output: `out/multi_stream_output.mp4` — 2×2 CCTV grid with independent tracking per camera
+Output: `out/multi_stream_output.mp4`  - 2×2 CCTV grid with independent tracking per camera
 
-**Step 4 — Show training attempt:**
+**Step 4  - Show training attempt:**
 ```bash
 python train_and_evaluate.py
 ```
-Output: `out/training_report.json` — comparison showing pretrained outperformed custom model
+Output: `out/training_report.json`  - comparison showing pretrained outperformed custom model
 
-**Step 5 — Show dashboard with all results:**
+**Step 5  - Show dashboard with all results:**
 ```bash
 python dashboard.py
 # Open http://localhost:5000
 ```
 
-**Step 6 — Generate Word report for submission:**
+**Step 6  - Generate Word report for submission:**
 ```bash
 python generate_report.py
 ```
@@ -397,7 +411,7 @@ Output: `DogVision_GPU_Pipeline_Report.docx`
 ```bash
 python run_demo_gpu.py --source input/dogbite.mp4 --no-display
 ```
-Shows: TensorRT FP16 auto-export, CUDA inference, CuPy ring buffer, cuDF analytics — all logged in terminal. Same output but 10-20× faster.
+Shows: TensorRT FP16 auto-export, CUDA inference, CuPy ring buffer, cuDF analytics  - all logged in terminal. Same output but 10-20× faster.
 
 Or from the browser dashboard: check "GPU Mode" checkbox before uploading a video.
 
@@ -408,7 +422,7 @@ Or from the browser dashboard: check "GPU Mode" checkbox before uploading a vide
 | "How does detection work?" | Run dogbite.mp4, show green dog boxes + teal person boxes in output video |
 | "How does bite detection work?" | Show red BITE RISK lines in dogbite.mp4 output, explain 4-factor scoring |
 | "How does access control work?" | Run house break-in with restricted config, show orange UNAUTHORIZED labels |
-| "Can it handle multiple cameras?" | Show multi_stream_output.mp4 — 4 cameras in 2×2 grid |
+| "Can it handle multiple cameras?" | Show multi_stream_output.mp4  - 4 cameras in 2×2 grid |
 | "Why not train your own model?" | Run train_and_evaluate.py, show comparison report |
 | "Where is GPU acceleration?" | Open GPU_ACCELERATION_MAP.md or run run_demo_gpu.py |
 | "Show me the data" | Open dashboard → Events tab → select any run |
@@ -421,7 +435,7 @@ Or from the browser dashboard: check "GPU Mode" checkbox before uploading a vide
 | Document | What It Covers |
 |----------|---------------|
 | [README.md](README.md) | Project overview, quick start, layout |
-| [COMPLETE_OVERVIEW.md](COMPLETE_OVERVIEW.md) | **This file** — full system explanation for teacher |
+| [COMPLETE_OVERVIEW.md](COMPLETE_OVERVIEW.md) | **This file**  - full system explanation for teacher |
 | [PROJECT_REPORT.md](PROJECT_REPORT.md) | Detailed technical report (code-to-feature mapping) |
 | [PIPELINE_WALKTHROUGH.md](PIPELINE_WALKTHROUGH.md) | Frame-by-frame GPU pipeline flow with diagrams |
 | [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | Per-script usage guide with CLI flags |

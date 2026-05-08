@@ -45,7 +45,7 @@ This project's core objective is demonstrating **GPU-accelerated computing**, no
 - Risk overfitting to a small custom dataset
 - Produce marginal accuracy gains over COCO-pretrained weights
 
-Using pretrained weights lets us focus engineering effort on the GPU pipeline: TensorRT FP16 export, CuPy ring buffers, cuDF analytics, multi-stream batching — the actual deliverables.
+Using pretrained weights lets us focus engineering effort on the GPU pipeline: TensorRT FP16 export, CuPy ring buffers, cuDF analytics, multi-stream batching  - the actual deliverables.
 
 ### 4. Reproducibility
 
@@ -96,8 +96,8 @@ These datasets are referenced in the project documentation and `train.py` for us
 | Model | Parameters | Size | Speed (GPU) | Speed (CPU) | When to Use |
 |-------|-----------|------|-------------|-------------|-------------|
 | `yolov8n.pt` | 3.2M | 6 MB | ~45 FPS | ~15 FPS | Fastest, lowest accuracy |
-| `yolov8s.pt` | 11.2M | 22 MB | ~35 FPS | ~5 FPS | **Multi-stream default** — good speed/accuracy balance |
-| `yolov8m.pt` | 25.9M | 50 MB | ~25 FPS | ~2 FPS | **Single-stream default** — best recall for small/distant objects |
+| `yolov8s.pt` | 11.2M | 22 MB | ~35 FPS | ~5 FPS | **Multi-stream default**  - good speed/accuracy balance |
+| `yolov8m.pt` | 25.9M | 50 MB | ~25 FPS | ~2 FPS | **Single-stream default**  - best recall for small/distant objects |
 | `yolov8l.pt` | 43.7M | 84 MB | ~18 FPS | ~1 FPS | Highest accuracy, needs more VRAM |
 
 We default to `yolov8m.pt` for single-stream (best recall for small dogs in CCTV) and `yolov8s.pt` for multi-stream (need 4× throughput).

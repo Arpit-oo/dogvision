@@ -1,4 +1,4 @@
-# GPU Pipeline Walkthrough — Detection to Output, Step by Step
+# GPU Pipeline Walkthrough  - Detection to Output, Step by Step
 
 Complete flow of one video frame through the CUDA-accelerated pipeline. Every step maps to a file + function + GPU technology.
 
@@ -12,7 +12,7 @@ VIDEO SOURCE (file / webcam / RTSP)
     ▼ NVDEC hardware decode (GPU video decoder)         [utils/video.py:iter_frames()]
 FRAME uploaded to GPU memory as torch.Tensor
     │
-    ▼ model.track() — single CUDA kernel launch         [detection/yolo.py:track()]
+    ▼ model.track()  - single CUDA kernel launch         [detection/yolo.py:track()]
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  YOLOv8 INFERENCE ON GPU (TensorRT FP16 / PyTorch CUDA + cuDNN)        │
 │                                                                         │
@@ -28,9 +28,9 @@ FRAME uploaded to GPU memory as torch.Tensor
 │                                                                         │
 │  Forward pass: frame → 80-class predictions (all on GPU)                │
 │  CUDA NMS: IoU=0.5, remove duplicate boxes (GPU parallel sort+filter)   │
-│  Class filter: keep person(0) + dog(16) — GPU tensor mask               │
+│  Class filter: keep person(0) + dog(16)  - GPU tensor mask               │
 │  ByteTrack association: match detections → persistent track IDs          │
-│  @torch.inference_mode() — autograd disabled, zero gradient overhead     │
+│  @torch.inference_mode()  - autograd disabled, zero gradient overhead     │
 │                                                                         │
 │  Output: xyxy tensors + conf tensors + class tensors + ID tensors (GPU) │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -87,16 +87,16 @@ event_log.log_bite()      event_log.log_access()
     │
     ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  CuPy RING BUFFER — GPU-RESIDENT DETECTION STORAGE                      │
+│  CuPy RING BUFFER  - GPU-RESIDENT DETECTION STORAGE                      │
 │  [analytics/ring_buffer.py]                                              │
 │                                                                          │
 │  • 9 preallocated CuPy GPU arrays (cp.zeros on CUDA memory)             │
 │    frame, stream, track_id, x1, y1, x2, y2, conf, t_ns                  │
 │  • O(1) append: direct GPU memory write at head pointer                  │
-│  • Zero allocation per frame — preallocated at pipeline start            │
+│  • Zero allocation per frame  - preallocated at pipeline start            │
 │  • Circular wraparound: cp.concatenate for GPU-side unrolling            │
 │  • Capacity: 54,000 rows (~30 min at 30 FPS)                            │
-│  [ring_buffer.py:append_batch() — all writes to CUDA memory]            │
+│  [ring_buffer.py:append_batch()  - all writes to CUDA memory]            │
 └──────────────────────────────────────────────────────────────────────────┘
     │
     ▼ Every 30 frames: snapshot() → cuDF GPU DataFrame
@@ -133,7 +133,7 @@ event_log.log_bite()      event_log.log_access()
 │    All math via CuPy: cp.maximum, cp.minimum, cp.where, cp.stack        │
 │                                                                          │
 │  • roi_histograms(): per-dog crop → 16³-bin HSV histogram               │
-│    cp.bincount() on GPU — parallel histogram binning                     │
+│    cp.bincount() on GPU  - parallel histogram binning                     │
 │    Normalized histograms stay on GPU until final result                   │
 │                                                                          │
 │  Purpose: re-ID hints for cross-camera dog matching                      │
@@ -173,7 +173,7 @@ VIDEO OUTPUT                                            [run_demo_cpu.py:192-197
 │  THREAD 2: GPU INFERENCE             [pipeline/orchestrator.py]        │
 │  ───────────────────────                                               │
 │  YOLOv8 TensorRT FP16 → detect + NMS + ByteTrack (all CUDA)           │
-│  @torch.inference_mode() — zero autograd overhead                      │
+│  @torch.inference_mode()  - zero autograd overhead                      │
 │  CuPy ring buffer append → O(1) GPU memory write                       │
 │  CUDA Stream 2: inference overlaps with next decode                    │
 └───────────────────────────┬────────────────────────────────────────────┘
@@ -191,7 +191,7 @@ VIDEO OUTPUT                                            [run_demo_cpu.py:192-197
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-**CUDA Streams:** Thread 1 uploads frame N+1 to GPU while Thread 2 runs inference on frame N. This hides PCIe transfer latency — GPU never idles waiting for data.
+**CUDA Streams:** Thread 1 uploads frame N+1 to GPU while Thread 2 runs inference on frame N. This hides PCIe transfer latency  - GPU never idles waiting for data.
 
 ---
 
@@ -206,7 +206,7 @@ VIDEO OUTPUT                                            [run_demo_cpu.py:192-197
      │             │             │             │
      ▼             ▼             ▼             ▼
 ┌──────────────────────────────────────────────────────┐
-│  YOLOv8 TensorRT FP16 — PER-STREAM INFERENCE         │
+│  YOLOv8 TensorRT FP16  - PER-STREAM INFERENCE         │
 │  Each stream: detect(dog+person) + ByteTrack (CUDA)  │
 │  Future: batch all 4 frames → single GPU forward pass│
 └──────────────────────────────────────────────────────┘
@@ -229,14 +229,13 @@ VIDEO OUTPUT                                            [run_demo_cpu.py:192-197
 
 ---
 
-## GPU Technology Stack — Where Each Library Acts
+## GPU Technology Stack  - Where Each Library Acts
 
 ```
 Layer                        CUDA Technology              File
 ────────────────────────     ────────────────────────     ─────────────────────────
 Video decode                 NVDEC (GPU hardware)         utils/video.py
 Frame upload                 CUDA memcpy H→D              detection/yolo.py
-Convolution layers           cuDNN (Winograd/FFT)         detection/yolo.py (implicit)
 Model optimization           TensorRT FP16                detection/yolo.py:_load()
 Inference forward pass       PyTorch CUDA                 detection/yolo.py:track()
 Gradient suppression         torch.inference_mode()       detection/yolo.py (decorator)
@@ -251,7 +250,6 @@ Distinct count               cuDF GPU nunique             analytics/window.py:co
 Vectorized math              cuDF GPU arithmetic          analytics/window.py:compute()
 Color conversion             CuPy BGR→HSV                 analytics/roi_hist.py:bgr_to_hsv_gpu()
 Histogram binning            CuPy cp.bincount             analytics/roi_hist.py:roi_histograms()
-Custom kernels               Numba @cuda.jit              (available for extensions)
 Pipeline parallelism         CUDA Streams                 pipeline/orchestrator.py
 Thread overlap               CUDA async memcpy            pipeline/orchestrator.py
 ```

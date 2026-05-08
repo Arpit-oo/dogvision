@@ -1,7 +1,21 @@
-# Dogvision — GPU-Accelerated Object Detection & Behavior Analysis
+# DogVision - GPU-Accelerated Object Detection and Behavior Analysis System
 
-Real-time multi-class pipeline: detect dogs and persons, analyze dog bite risk,
-enforce time-based access control — all GPU-first with CUDA acceleration.
+**Course:** Accelerated Data Science
+**Instructor:** Dr. Manisha Malik
+
+**Submitted By:**
+
+| Name | Roll Number |
+|------|-------------|
+| Priya Sharma | 102316008 |
+| Vaibhav Sundriyal | 102316077 |
+| Shikhar Saxena | 102316078 |
+| Arpit Walia | 102316109 |
+
+---
+
+Real-time multi-class pipeline that detects dogs and persons, analyzes dog bite risk,
+and enforces time-based access control using CUDA-based GPU acceleration.
 
 ## Architecture
 
@@ -53,15 +67,15 @@ python run_demo_cpu.py --source your_video.mp4
 
 ## Docs
 
-- [`plan.md`](plan.md) — design spec
-- [`HOW_TO_TRAIN_AND_RUN.md`](HOW_TO_TRAIN_AND_RUN.md) — setup, demo, benchmark, fine-tuning
-- [`PROJECT_REPORT.md`](PROJECT_REPORT.md) — full technical report
-- [`PIPELINE_WALKTHROUGH.md`](PIPELINE_WALKTHROUGH.md) — frame-by-frame GPU pipeline flow
-- [`SCRIPTS_GUIDE.md`](SCRIPTS_GUIDE.md) — per-script usage guide
-- [`MODEL_JUSTIFICATION.md`](MODEL_JUSTIFICATION.md) — why pretrained over custom training
-- [`GPU_ACCELERATION_MAP.md`](GPU_ACCELERATION_MAP.md) — GPU tech → file:line mapping
-- [`UNAUTHORIZED_ACCESS_EXPLAINED.md`](UNAUTHORIZED_ACCESS_EXPLAINED.md) — access control deep-dive
-- [`configs/access_schedule.yaml`](configs/access_schedule.yaml) — per-camera access rules
+- [`plan.md`](plan.md)  - design spec
+- [`HOW_TO_TRAIN_AND_RUN.md`](HOW_TO_TRAIN_AND_RUN.md)  - setup, demo, benchmark, fine-tuning
+- [`PROJECT_REPORT.md`](PROJECT_REPORT.md)  - full technical report
+- [`PIPELINE_WALKTHROUGH.md`](PIPELINE_WALKTHROUGH.md)  - frame-by-frame GPU pipeline flow
+- [`SCRIPTS_GUIDE.md`](SCRIPTS_GUIDE.md)  - per-script usage guide
+- [`MODEL_JUSTIFICATION.md`](MODEL_JUSTIFICATION.md)  - why pretrained over custom training
+- [`GPU_ACCELERATION_MAP.md`](GPU_ACCELERATION_MAP.md)  - GPU tech → file:line mapping
+- [`UNAUTHORIZED_ACCESS_EXPLAINED.md`](UNAUTHORIZED_ACCESS_EXPLAINED.md)  - access control deep-dive
+- [`configs/access_schedule.yaml`](configs/access_schedule.yaml)  - per-camera access rules
 
 ## Project Layout
 

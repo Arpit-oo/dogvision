@@ -1,4 +1,4 @@
-# How to Train and Run — Dogvision
+# How to Train and Run  - Dogvision
 
 A GPU-first object detection and behavior analysis system: detects dogs and persons,
 analyzes bite/aggression risk, enforces time-based access control, all with
@@ -23,7 +23,7 @@ conda env create -f environment.yml
 conda activate dogvision
 ```
 
-### 1.3 Or pip-only (no cuDF — analytics stage disabled)
+### 1.3 Or pip-only (no cuDF  - analytics stage disabled)
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -45,11 +45,11 @@ python -c "import cudf; print(cudf.__version__)"
 python demo.py --source path/to/video.mp4
 ```
 Press **q** to quit. Outputs land in `out/`:
-- `out/annotated.mp4` — bounding boxes + track IDs + bite alerts + access violations
-- `out/detections.parquet` — per-detection log
-- `out/events.json` — bite risk + access violation events
-- `out/summary.json` — run summary (unique dogs/persons, alert counts, FPS)
-- `out/analytics_window.json` — latest cuDF rolling-window stats
+- `out/annotated.mp4`  - bounding boxes + track IDs + bite alerts + access violations
+- `out/detections.parquet`  - per-detection log
+- `out/events.json`  - bite risk + access violation events
+- `out/summary.json`  - run summary (unique dogs/persons, alert counts, FPS)
+- `out/analytics_window.json`  - latest cuDF rolling-window stats
 
 ### 2.1b CPU MVP (full pipeline, no GPU needed)
 ```bash
@@ -110,9 +110,9 @@ python demo.py --source video.mp4 --no-trt
 
 Key GPU optimizations:
 - **YOLOv8 exported to TensorRT FP16** on first run (engine cached next to the `.pt`).
-- **Single YOLO pass** detects both dogs and persons — routed into dual pipelines.
+- **Single YOLO pass** detects both dogs and persons  - routed into dual pipelines.
 - **ByteTrack** runs inside Ultralytics' fused detect-and-track path; no extra CPU hop.
-- **CuPy ring buffer** stores detection rows in preallocated GPU columns — O(1) append,
+- **CuPy ring buffer** stores detection rows in preallocated GPU columns  - O(1) append,
   no per-frame cuDF concat.
 - **cuDF rolling window** recomputes aggregates every 30 frames (≈1 s at 30 FPS).
 - **Three-thread pipeline** (decode / inference / analytics+display) with bounded
@@ -135,16 +135,16 @@ RTX 3060 at 640px input.
 
 ## 5. (Optional) Fine-Tune YOLOv8 on Dogs
 
-You do **not** need to train to use the pipeline — COCO-pretrained weights
+You do **not** need to train to use the pipeline  - COCO-pretrained weights
 already detect `dog` (class 16). Fine-tune only if you want improved recall
 on your specific scenes or camera angles.
 
 ### 5.1 Pick a dataset
 Public options you can use directly or subset:
-- **Stanford Dogs** — 120 breeds, 20k images (bbox labels available).
-- **Oxford-IIIT Pet** — 37 breeds incl. dogs, bbox labels.
-- **Open Images V7** — filter `Dog` class.
-- **Your own recordings** — label with [Roboflow](https://roboflow.com) or CVAT.
+- **Stanford Dogs**  - 120 breeds, 20k images (bbox labels available).
+- **Oxford-IIIT Pet**  - 37 breeds incl. dogs, bbox labels.
+- **Open Images V7**  - filter `Dog` class.
+- **Your own recordings**  - label with [Roboflow](https://roboflow.com) or CVAT.
 
 ### 5.2 Convert to YOLO format
 Ultralytics expects:
@@ -208,19 +208,19 @@ yolo export model=runs/train/dogvision/weights/best.pt format=engine half=True i
 
 ## 7. Troubleshooting
 
-**`TensorRT export failed`** — proceed with PyTorch FP16 (the fallback runs
+**`TensorRT export failed`**  - proceed with PyTorch FP16 (the fallback runs
 automatically). Or re-install a matching TensorRT version for your CUDA.
 
-**`cuDF not available`** — you're probably in the pip-only env. Install via
+**`cuDF not available`**  - you're probably in the pip-only env. Install via
 `conda env create -f environment.yml` instead.
 
-**Low FPS on webcam** — your camera driver may cap capture FPS. Check with
+**Low FPS on webcam**  - your camera driver may cap capture FPS. Check with
 `v4l2-ctl --list-formats-ext` (Linux) or try `--source 0` vs `1`.
 
-**Tracker IDs jump around** — occlusion will always reassign IDs with
+**Tracker IDs jump around**  - occlusion will always reassign IDs with
 ByteTrack. For heavier re-ID, swap `tracker.cfg: botsort.yaml` in the config.
 
-**GPU OOM on long videos** — lower `analytics.ring_capacity` in the config
+**GPU OOM on long videos**  - lower `analytics.ring_capacity` in the config
 or reduce `imgsz` to 512.
 
 ---

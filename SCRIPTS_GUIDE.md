@@ -1,8 +1,8 @@
-# Scripts Guide — What Each Script Does
+# Scripts Guide  - What Each Script Does
 
 ---
 
-## 1. `run_demo_cpu.py` — Single-Stream Full Pipeline (CPU)
+## 1. `run_demo_cpu.py`  - Single-Stream Full Pipeline (CPU)
 
 **Purpose:** Main demo script. Processes one video through the complete dual pipeline on CPU.
 
@@ -10,8 +10,8 @@
 1. Opens a video file, webcam, or RTSP stream
 2. Runs YOLOv8 detect+track on every frame (detects dogs + persons simultaneously)
 3. Routes detections by class into two pipelines:
-   - **Dog Pipeline:** runs `BiteRiskAnalyzer` — scores every dog-person pair for bite risk using proximity, overlap, lunge detection, and sustained contact duration
-   - **Person Pipeline:** runs `AccessController` — checks each detected person against per-camera time-based access rules from YAML config
+   - **Dog Pipeline:** runs `BiteRiskAnalyzer`  - scores every dog-person pair for bite risk using proximity, overlap, lunge detection, and sustained contact duration
+   - **Person Pipeline:** runs `AccessController`  - checks each detected person against per-camera time-based access rules from YAML config
 4. Draws annotated frame: green boxes (dogs), teal boxes (persons), red alert lines (bite risk), orange labels (unauthorized access), semi-transparent HUD
 5. Writes output video + events JSON + summary JSON
 6. Ghost persistence: keeps showing last-known dog bbox for 30 frames after tracker loses it
@@ -24,13 +24,13 @@ python run_demo_cpu.py --source video.mp4 --model yolov8m.pt --imgsz 960 --conf 
 ```
 
 **Outputs:**
-- `out/dogvision_output.mp4` — annotated video
-- `out/events.json` — bite risk + access violation events
-- `out/summary.json` — run stats (frames, unique counts, alert counts, FPS)
+- `out/dogvision_output.mp4`  - annotated video
+- `out/events.json`  - bite risk + access violation events
+- `out/summary.json`  - run stats (frames, unique counts, alert counts, FPS)
 
 ---
 
-## 2. `run_multi_stream.py` — Multi-Stream 2×2 CCTV Grid
+## 2. `run_multi_stream.py`  - Multi-Stream 2×2 CCTV Grid
 
 **Purpose:** Process 1–4 videos simultaneously, displayed in a 2×2 CCTV-style grid.
 
@@ -65,13 +65,13 @@ python run_multi_stream.py --sources a.mp4 b.mp4 c.mp4 d.mp4 --model yolov8s.pt 
 ```
 
 **Outputs:**
-- `out/multi_stream_output.mp4` — 2×2 grid video (1280×720)
-- `out/events.json` — events from ALL streams combined
-- `out/multi_summary.json` — per-stream breakdown (dogs, persons, bites, access per camera)
+- `out/multi_stream_output.mp4`  - 2×2 grid video (1280×720)
+- `out/events.json`  - events from ALL streams combined
+- `out/multi_summary.json`  - per-stream breakdown (dogs, persons, bites, access per camera)
 
 ---
 
-## 3. `demo.py` — GPU Pipeline Entry Point
+## 3. `demo.py`  - GPU Pipeline Entry Point
 
 **Purpose:** Production GPU entry point using the threaded pipeline orchestrator.
 
@@ -97,7 +97,7 @@ python demo.py --source video.mp4 --no-display   # headless
 
 ---
 
-## 4. `benchmark.py` — GPU vs CPU Performance Comparison
+## 4. `benchmark.py`  - GPU vs CPU Performance Comparison
 
 **Purpose:** Measures and compares inference speed between GPU and CPU paths.
 
@@ -118,7 +118,7 @@ python benchmark.py --source video.mp4 --max-frames 300
 
 ---
 
-## 5. `run_demo_gpu.py` — GPU Demo Entry Point (Presentation)
+## 5. `run_demo_gpu.py`  - GPU Demo Entry Point (Presentation)
 
 **Purpose:** Full GPU demo script for showing the professor. Uses TensorRT FP16, CuPy ring buffer, and cuDF analytics.
 
@@ -144,7 +144,7 @@ python run_demo_gpu.py --source video.mp4 --device 0   # specific GPU
 
 ---
 
-## 6. `generate_report.py` — Academic Word Report Generator
+## 6. `generate_report.py`  - Academic Word Report Generator
 
 **Purpose:** Generates a professional 16-section `.docx` Word document for academic submission.
 
@@ -172,7 +172,7 @@ python generate_report.py
 
 ---
 
-## 7. `train_and_evaluate.py` — Training Attempt + Model Comparison
+## 7. `train_and_evaluate.py`  - Training Attempt + Model Comparison
 
 **Purpose:** Demonstrates our attempt to train a custom dog detection model and compares it against the pretrained COCO model to justify using pretrained weights.
 
@@ -201,13 +201,13 @@ python train_and_evaluate.py --evaluate-only
 **No manual dataset needed.** Script auto-generates training data from your input videos.
 
 **Outputs:**
-- `out/training_report.json` — comparison report with conclusion
-- `runs/train/dog_finetune/weights/best.pt` — trained weights
-- `runs/train/dog_finetune/` — training curves, confusion matrix, PR curves
+- `out/training_report.json`  - comparison report with conclusion
+- `runs/train/dog_finetune/weights/best.pt`  - trained weights
+- `runs/train/dog_finetune/`  - training curves, confusion matrix, PR curves
 
 ---
 
-## 8. `train.py` — Optional YOLOv8 Fine-Tuning
+## 8. `train.py`  - Optional YOLOv8 Fine-Tuning
 
 **Purpose:** Fine-tune YOLOv8 on a custom dog dataset for better recall on specific scenes.
 
